@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+snomed_index/
+data/
+eval-results/

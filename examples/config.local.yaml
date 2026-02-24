@@ -1,0 +1,24 @@
+# Default terminology used when 'terminology' parameter is omitted.
+# For Snowstorm targets, terminologies are auto-discovered from /codesystems
+# (lowercased shortName, e.g. "snomedct", "snomedct-us").
+default_terminology: snomedct
+
+targets:
+  # Snowstorm (full) -- terminologies auto-discovered from /codesystems.
+  snowstorm:
+    base_url: "http://localhost:8080"
+    mode: "auto"
+    fhir_path: "/fhir"
+    timeout_seconds: 10
+    auth:
+      mode: "none"
+
+  # Snowstorm Lite -- single terminology per instance.
+  # Uncomment and adjust to add a Lite backend:
+  # lite-nz:
+  #   base_url: "http://localhost:8082"
+  #   mode: "lite"
+  #   terminology_name: "snomedct-nz"
+  #   fhir_path: "/fhir"
+  #   auth:
+  #     mode: "none"

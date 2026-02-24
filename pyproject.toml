@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling>=1.24.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "snowstorm-mcp-server"
+version = "0.1.0"
+description = "MCP adapter service for Snowstorm and Snowstorm Lite"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "SNOMED International" }]
+dependencies = [
+  "httpx>=0.27.0",
+  "mcp>=1.26.0",
+  "pydantic>=2.8.0",
+  "PyYAML>=6.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "anyio>=4.4.0",
+  "pytest>=8.3.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/snowstorm_mcp_server"]
+
+[project.scripts]
+snowstorm-mcp-server = "snowstorm_mcp_server.__main__:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "integration: tests that require live Snowstorm/Snowstorm Lite endpoints",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

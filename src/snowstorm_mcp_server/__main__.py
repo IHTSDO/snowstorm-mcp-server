@@ -1,0 +1,31 @@
+from __future__ import annotations
+
+import argparse
+
+from .mcp_app import create_mcp_app
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Snowstorm MCP server")
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="Path to YAML/JSON config file (or use SNOWSTORM_MCP_CONFIG env var)",
+    )
+    parser.add_argument(
+        "--transport",
+        default="stdio",
+        choices=["stdio", "sse", "streamable-http"],
+        help="MCP transport to run",
+    )
+    return parser
+
+
+def main() -> None:
+    args = build_arg_parser().parse_args()
+    app = create_mcp_app(args.config)
+    app.run(transport=args.transport)
+
+
+if __name__ == "__main__":
+    main()
