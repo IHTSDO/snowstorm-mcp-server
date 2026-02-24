@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from snowstorm_mcp_server.capabilities import probe_target
+from snowstorm_mcp_server.capabilities import BackendType, probe_target
 from snowstorm_mcp_server.config import load_config
 from snowstorm_mcp_server.fhir import SnomedLookupService
 
@@ -21,6 +21,17 @@ def _load_local_targets():
         pytest.skip(f"Missing local config file: {CONFIG_PATH}")
     app = load_config(CONFIG_PATH)
     return app.targets
+
+
+def _find_target_by_backend(backend_type: BackendType) -> tuple[str, object]:
+    targets = _load_local_targets()
+    for name, target in targets.items():
+        status = probe_target(target)
+        if not status.reachable or not status.capabilities.has_fhir:
+            continue
+        if status.capabilities.backend_type == backend_type:
+            return name, target
+    pytest.skip(f"No reachable {backend_type.value} target with FHIR configured in {CONFIG_PATH}")
 
 
 @pytest.mark.integration
@@ -47,3 +58,15 @@ def test_lookup_snomed_concepts_on_live_target(
     assert result.display is not None
     assert expected_display_fragment in result.display.lower()
     assert result.version is None or "20251101" in result.version or "sct/" in (result.system or "")
+
+
+@pytest.mark.integration
+def test_lookup_snomed_concepts_on_live_lite_target_if_available() -> None:
+    target_name, target = _find_target_by_backend(BackendType.LITE)
+
+    with SnomedLookupService(target) as svc:
+        result = svc.lookup(code="404684003")
+
+    assert result.code == "404684003"
+    assert result.display is not None
+    assert "clinical finding" in result.display.lower()

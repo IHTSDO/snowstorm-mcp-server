@@ -58,13 +58,17 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
 
     @mcp.tool(
         description=(
-            "Return raw FHIR CapabilityStatement metadata for a terminology's backend. "
+            "Return a parsed FHIR CapabilityStatement summary for a terminology's backend. "
+            "Set include_raw=true (default) to also include the raw CapabilityStatement payload. "
             "Optionally specify terminology; defaults to the server's default."
         ),
         structured_output=True,
     )
-    def fhir_metadata(terminology: str | None = None) -> dict[str, Any]:
-        return _tool_guard(lambda: runtime.fhir_metadata(terminology))
+    def fhir_metadata(
+        terminology: str | None = None,
+        include_raw: bool = True,
+    ) -> dict[str, Any]:
+        return _tool_guard(lambda: runtime.fhir_metadata(terminology, include_raw=include_raw))
 
     @mcp.tool(
         description=(

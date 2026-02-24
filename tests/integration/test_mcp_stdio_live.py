@@ -70,6 +70,16 @@ async def test_mcp_stdio_lists_terminologies_and_capabilities() -> None:
             assert payload["capabilities"]["has_fhir"] is True
             assert payload["backend_type"] in {"snowstorm", "unknown"}
 
+            meta_summary = await _call_tool(
+                session,
+                "fhir_metadata",
+                {"include_raw": False},
+            )
+            meta_payload = meta_summary.structuredContent
+            assert "summary" in meta_payload
+            assert "metadata" not in meta_payload
+            assert meta_payload["summary"]["resourceType"] == "CapabilityStatement"
+
 
 @pytest.mark.integration
 @pytest.mark.anyio

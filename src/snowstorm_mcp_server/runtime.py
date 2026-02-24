@@ -74,17 +74,25 @@ class ServerRuntime:
             "fhir_metadata_summary": _summarize_fhir_metadata(status.capabilities.fhir_metadata),
         }
 
-    def fhir_metadata(self, terminology: str | None = None) -> dict[str, Any]:
+    def fhir_metadata(
+        self,
+        terminology: str | None = None,
+        *,
+        include_raw: bool = True,
+    ) -> dict[str, Any]:
         info, target = self._resolve(terminology)
         status = self.registry.get_target_status(info.target_name)
         if status is None:
             status = probe_target(target)
             self.registry.set_target_status(info.target_name, status)
-        return {
+        payload = {
             "terminology": info.name,
             "fhir_base_url": status.fhir_base_url,
-            "metadata": status.capabilities.fhir_metadata,
+            "summary": _summarize_fhir_metadata(status.capabilities.fhir_metadata),
         }
+        if include_raw:
+            payload["metadata"] = status.capabilities.fhir_metadata
+        return payload
 
     def snomed_lookup(
         self,
