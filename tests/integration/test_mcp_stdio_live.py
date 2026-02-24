@@ -10,7 +10,12 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.types import CallToolResult
 
 
-CONFIG_PATH = Path(__file__).resolve().parents[2] / "examples" / "config.local.yaml"
+CONFIG_PATH = Path(
+    os.getenv(
+        "SNOWSTORM_MCP_TEST_CONFIG",
+        str(Path(__file__).resolve().parents[2] / "examples" / "config.local.yaml"),
+    )
+)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 

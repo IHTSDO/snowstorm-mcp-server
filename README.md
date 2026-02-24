@@ -10,6 +10,27 @@ uv pip install -e .[dev]
 uv run pytest -q
 ```
 
+## Docker Integration Stack (Snowstorm + Lite)
+
+Start local containers for integration testing:
+
+```bash
+docker compose -f docker-compose.integration.yml up -d
+```
+
+Import a local RF2 archive into both Snowstorm and Snowstorm Lite:
+
+```bash
+dev/integration/import_snomed.sh \
+  --rf2-zip ../SnomedCT_InternationalRF2_PRODUCTION_20251101T120000Z.zip
+```
+
+Use the provided MCP config for local integration tests:
+
+```bash
+SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-integration.yaml ./.venv/bin/pytest -q tests/integration
+```
+
 ## Local config example
 
 See `examples/config.local.yaml` (Snowstorm at `http://localhost:8080`).

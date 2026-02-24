@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,12 @@ from snowstorm_mcp_server.config import load_config
 from snowstorm_mcp_server.fhir import SnomedLookupService
 
 
-CONFIG_PATH = Path(__file__).resolve().parents[2] / "examples" / "config.local.yaml"
+CONFIG_PATH = Path(
+    os.getenv(
+        "SNOWSTORM_MCP_TEST_CONFIG",
+        str(Path(__file__).resolve().parents[2] / "examples" / "config.local.yaml"),
+    )
+)
 
 
 def _load_targets():
