@@ -81,7 +81,7 @@ becomes the default automatically.
 | `list_terminologies` | List available SNOMED terminologies and the default |
 | `server_health` | Check reachability and capabilities for a terminology |
 | `server_capabilities` | Detailed backend info for a terminology |
-| `fhir_metadata` | Raw FHIR CapabilityStatement for a terminology's backend |
+| `fhir_metadata` | FHIR CapabilityStatement summary (optional raw payload) |
 | `snomed_lookup` | FHIR CodeSystem/$lookup |
 | `snomed_validate_code` | FHIR CodeSystem/$validate-code |
 | `snomed_subsumes` | FHIR CodeSystem/$subsumes |

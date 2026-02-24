@@ -1,0 +1,9 @@
+{
+  "resourceType": "CapabilityStatement",
+  "fhirVersion": "4.0.1",
+  "status": "active",
+  "kind": "instance",
+  "software": {
+    "name": "Snowstorm"
+  }
+}
