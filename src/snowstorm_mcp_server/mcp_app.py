@@ -135,6 +135,64 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
 
     @mcp.tool(
         description=(
+            "FHIR ValueSet/$expand for SNOMED (works on Snowstorm and Lite when FHIR is available). "
+            "Defaults to the implicit SNOMED ValueSet URL and supports paging. "
+            "Use summary_only=true to avoid returning large expansion item lists."
+        ),
+        structured_output=True,
+    )
+    def snomed_expand(
+        terminology: str | None = None,
+        value_set_url: str | None = None,
+        filter: str | None = None,
+        offset: int = 0,
+        count: int = 20,
+        summary_only: bool = False,
+        max_contains: int = 100,
+    ) -> dict[str, Any]:
+        return _tool_guard(
+            lambda: runtime.snomed_expand(
+                terminology=terminology,
+                value_set_url=value_set_url,
+                filter=filter,
+                offset=offset,
+                count=count,
+                summary_only=summary_only,
+                max_contains=max_contains,
+            )
+        )
+
+    @mcp.tool(
+        description=(
+            "List Snowstorm code systems with summarized latest version info "
+            "(Snowstorm only; not supported on Lite). "
+            "Optionally specify terminology; defaults to the server's default."
+        ),
+        structured_output=True,
+    )
+    def snowstorm_list_codesystems(terminology: str | None = None) -> dict[str, Any]:
+        return _tool_guard(lambda: runtime.snowstorm_list_codesystems(terminology=terminology))
+
+    @mcp.tool(
+        description=(
+            "List versions for a Snowstorm code system short name (Snowstorm only; not supported on Lite). "
+            "Optionally specify terminology for routing; defaults to the server's default."
+        ),
+        structured_output=True,
+    )
+    def snowstorm_list_versions(
+        code_system_short_name: str,
+        terminology: str | None = None,
+    ) -> dict[str, Any]:
+        return _tool_guard(
+            lambda: runtime.snowstorm_list_versions(
+                terminology=terminology,
+                code_system_short_name=code_system_short_name,
+            )
+        )
+
+    @mcp.tool(
+        description=(
             "Snowstorm-native concept search by term (Snowstorm only; not supported on Lite). "
             "Optionally specify terminology; defaults to the server's default. "
             "Backend may reject very short terms; use at least 3 searchable characters "

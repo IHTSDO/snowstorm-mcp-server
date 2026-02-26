@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from urllib.parse import quote
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,6 +47,41 @@ class ConceptDetail(BaseModel):
     effective_time: str | None = None
     synonyms: list[str] = Field(default_factory=list)
     raw_description_count: int | None = None
+
+
+class CodeSystemSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    short_name: str
+    name: str | None = None
+    branch_path: str | None = None
+    latest_version: str | None = None
+    latest_effective_date: str | None = None
+
+
+class CodeSystemListResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    returned: int
+    code_systems: list[CodeSystemSummary] = Field(default_factory=list)
+
+
+class CodeSystemVersionSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: str | None = None
+    effective_date: str | None = None
+    branch_path: str | None = None
+    description: str | None = None
+    import_date: str | None = None
+
+
+class CodeSystemVersionsResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code_system_short_name: str
+    returned: int
+    versions: list[CodeSystemVersionSummary] = Field(default_factory=list)
 
 
 class SnowstormNativeService:
@@ -190,6 +226,71 @@ class SnowstormNativeService:
             raw_description_count=len(descriptions) if isinstance(descriptions, list) else None,
         )
 
+    def list_codesystems(self) -> CodeSystemListResult:
+        url = f"{self.target.base_url}/codesystems"
+        data = self.client.request("GET", url, expect_json=True)
+        items = data.get("items", [])
+        code_systems: list[CodeSystemSummary] = []
+        if isinstance(items, list):
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                short_name = item.get("shortName")
+                if not isinstance(short_name, str) or not short_name.strip():
+                    continue
+                latest_version, latest_effective_date = _extract_latest_version_fields(item)
+                code_systems.append(
+                    CodeSystemSummary(
+                        short_name=short_name.strip(),
+                        name=item.get("name") if isinstance(item.get("name"), str) else None,
+                        branch_path=(
+                            item.get("branchPath") if isinstance(item.get("branchPath"), str) else None
+                        ),
+                        latest_version=latest_version,
+                        latest_effective_date=latest_effective_date,
+                    )
+                )
+        return CodeSystemListResult(returned=len(code_systems), code_systems=code_systems)
+
+    def list_versions(self, *, code_system_short_name: str) -> CodeSystemVersionsResult:
+        short_name = code_system_short_name.strip()
+        if not short_name:
+            raise ValueError("code_system_short_name must not be empty")
+        url = f"{self.target.base_url}/codesystems/{quote(short_name, safe='')}/versions"
+        data = self.client.request("GET", url, expect_json=True)
+        items = data.get("items", [])
+        versions: list[CodeSystemVersionSummary] = []
+        if isinstance(items, list):
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                version_value = _first_non_empty_str(
+                    item.get("effectiveDate"),
+                    item.get("effectiveTime"),
+                    _normalize_compact_date(item.get("version")),
+                    item.get("version"),
+                )
+                versions.append(
+                    CodeSystemVersionSummary(
+                        version=version_value,
+                        effective_date=_first_non_empty_str(
+                            item.get("effectiveDate"),
+                            item.get("effectiveTime"),
+                            _normalize_compact_date(item.get("version")),
+                        ),
+                        branch_path=(
+                            item.get("branchPath") if isinstance(item.get("branchPath"), str) else None
+                        ),
+                        description=_first_non_empty_str(item.get("description"), item.get("name")),
+                        import_date=_first_non_empty_str(item.get("importDate")),
+                    )
+                )
+        return CodeSystemVersionsResult(
+            code_system_short_name=short_name,
+            returned=len(versions),
+            versions=versions,
+        )
+
 
 def _nested_term(obj: Any) -> str | None:
     if isinstance(obj, dict):
@@ -238,3 +339,74 @@ def _search_score(query_norm: str, hit: ConceptSearchHit) -> tuple[int, int, int
     contains = any(query_norm and query_norm in t for t in texts)
     short_bonus = max(0, 200 - len(matched)) if matched else 0
     return (int(exact) * 1000 + int(prefix) * 500 + int(contains) * 200, int(hit.active is True), short_bonus)
+
+
+def _first_non_empty_str(*values: Any) -> str | None:
+    for value in values:
+        if isinstance(value, int) and not isinstance(value, bool):
+            return str(value)
+        if isinstance(value, str) and value.strip():
+            return value
+    return None
+
+
+def _extract_latest_version_fields(item: dict[str, Any]) -> tuple[str | None, str | None]:
+    """Return (latest_version, latest_effective_date) from a Snowstorm code-system item.
+
+    Handles three shapes: latestVersion as dict, str, or absent/other.
+    """
+    latest = item.get("latestVersion")
+
+    # Shape 1: latestVersion is an embedded object with typed fields.
+    if isinstance(latest, dict):
+        date_candidates = (
+            latest.get("effectiveDate"),
+            latest.get("effectiveTime"),
+            _normalize_compact_date(latest.get("version")),
+        )
+        effective_date = _first_non_empty_str(*date_candidates)
+        version = _first_non_empty_str(
+            *date_candidates, latest.get("version"), latest.get("shortName"),
+        )
+        return version, effective_date
+
+    # Shape 2: latestVersion is a plain string (e.g. "20240901").
+    if isinstance(latest, str):
+        normalized = _normalize_compact_date(latest)
+        return normalized or latest, _first_non_empty_str(
+            item.get("latestVersionEffectiveDate"),
+            item.get("latestVersionEffectiveTime"),
+            normalized,
+        )
+
+    # Shape 3: latestVersion absent — fall back to top-level fields.
+    top_date_candidates = (
+        item.get("latestVersionEffectiveDate"),
+        item.get("latestVersionEffectiveTime"),
+    )
+    effective_date = _first_non_empty_str(
+        *top_date_candidates,
+        item.get("latestEffectiveDate"),
+        _normalize_compact_date(item.get("latestVersion")),
+    )
+    version = _first_non_empty_str(
+        *top_date_candidates,
+        _normalize_compact_date(item.get("latestVersion")),
+        item.get("latestVersionShortName"),
+        item.get("latestVersion"),
+    )
+    return version, effective_date
+
+
+def _normalize_compact_date(value: Any) -> str | None:
+    if isinstance(value, int) and not isinstance(value, bool):
+        text = str(value)
+    elif isinstance(value, str):
+        text = value.strip()
+    else:
+        return None
+    if re.fullmatch(r"\d{8}", text):
+        return text
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        return text.replace("-", "")
+    return None

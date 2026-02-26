@@ -41,6 +41,32 @@ class SubsumesResult(BaseModel):
     raw_parameters: dict[str, list[Any]] = Field(default_factory=dict)
 
 
+class ExpansionContainsItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    system: str | None = None
+    version: str | None = None
+    code: str | None = None
+    display: str | None = None
+    inactive: bool | None = None
+
+
+class ExpandResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    value_set_url: str
+    filter: str | None = None
+    offset: int = 0
+    count: int | None = None
+    total: int | None = None
+    returned: int = 0
+    summary_only: bool = False
+    truncated: bool = False
+    contains: list[ExpansionContainsItem] = Field(default_factory=list)
+    expansion_identifier: str | None = None
+    raw_contains_count: int | None = None
+
+
 def _parse_parameters_resource(data: dict[str, Any]) -> dict[str, list[Any]]:
     if data.get("resourceType") != "Parameters":
         raise HttpRequestError("FHIR operation did not return a Parameters resource")
@@ -63,6 +89,8 @@ def _parse_parameters_resource(data: dict[str, Any]) -> dict[str, list[Any]]:
 
 
 class SnomedLookupService:
+    DEFAULT_IMPLICIT_SNOMED_VALUESET_URL = "http://snomed.info/sct?fhir_vs"
+
     def __init__(self, target: TargetConfig, *, client: HttpClient | None = None) -> None:
         self.target = target
         self._own_client = client is None
@@ -162,6 +190,87 @@ class SnomedLookupService:
             raw_parameters=parsed,
         )
 
+    def expand(
+        self,
+        *,
+        value_set_url: str | None = None,
+        filter: str | None = None,
+        offset: int = 0,
+        count: int = 20,
+        summary_only: bool = False,
+        max_contains: int = 100,
+    ) -> ExpandResult:
+        if offset < 0:
+            raise ValueError("offset must be >= 0")
+        if count < 1:
+            raise ValueError("count must be >= 1")
+        if max_contains < 1:
+            raise ValueError("max_contains must be >= 1")
+
+        resolved_url = (value_set_url or "").strip() or self.DEFAULT_IMPLICIT_SNOMED_VALUESET_URL
+        params: dict[str, Any] = {
+            "url": resolved_url,
+            "offset": offset,
+            "count": count,
+        }
+        if filter:
+            params["filter"] = filter
+
+        url = f"{self.target.fhir_base_url}/ValueSet/$expand"
+        data = self.client.request("GET", url, params=params, expect_json=True)
+        if data.get("resourceType") != "ValueSet":
+            raise HttpRequestError("FHIR $expand did not return a ValueSet resource")
+
+        expansion = data.get("expansion")
+        if not isinstance(expansion, dict):
+            expansion = {}
+
+        raw_contains = expansion.get("contains")
+        parsed_contains: list[ExpansionContainsItem] = []
+        raw_contains_count: int | None = None
+        if isinstance(raw_contains, list):
+            raw_contains_count = len(raw_contains)
+            if not summary_only:
+                for item in raw_contains[:max_contains]:
+                    if not isinstance(item, dict):
+                        continue
+                    parsed_contains.append(
+                        ExpansionContainsItem(
+                            system=item.get("system") if isinstance(item.get("system"), str) else None,
+                            version=item.get("version")
+                            if isinstance(item.get("version"), str)
+                            else None,
+                            code=item.get("code") if isinstance(item.get("code"), str) else None,
+                            display=item.get("display")
+                            if isinstance(item.get("display"), str)
+                            else None,
+                            inactive=item.get("inactive")
+                            if isinstance(item.get("inactive"), bool)
+                            else None,
+                        )
+                    )
+
+        server_offset = _as_int(expansion.get("offset"))
+        return ExpandResult(
+            value_set_url=resolved_url,
+            filter=filter,
+            offset=server_offset if server_offset is not None else offset,
+            count=count,
+            total=_as_int(expansion.get("total")),
+            returned=0 if summary_only else len(parsed_contains),
+            summary_only=summary_only,
+            truncated=(
+                (not summary_only)
+                and raw_contains_count is not None
+                and raw_contains_count > len(parsed_contains)
+            ),
+            contains=[] if summary_only else parsed_contains,
+            expansion_identifier=(
+                expansion.get("identifier") if isinstance(expansion.get("identifier"), str) else None
+            ),
+            raw_contains_count=raw_contains_count,
+        )
+
     def _validate_code_via_lookup(
         self,
         *,
@@ -206,6 +315,10 @@ def _first_bool(values: list[Any] | None) -> bool | None:
         return None
     value = values[0]
     return value if isinstance(value, bool) else None
+
+
+def _as_int(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
 def _looks_like_not_found_lookup_error(exc: HttpRequestError, message: str) -> bool:

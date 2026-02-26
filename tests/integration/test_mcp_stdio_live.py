@@ -56,9 +56,12 @@ async def test_mcp_stdio_lists_terminologies_and_capabilities() -> None:
                 "list_terminologies",
                 "server_health",
                 "server_capabilities",
+                "snomed_expand",
                 "snomed_lookup",
                 "snomed_validate_code",
                 "snomed_subsumes",
+                "snowstorm_list_codesystems",
+                "snowstorm_list_versions",
                 "snowstorm_search_concepts",
                 "snowstorm_get_concept_native",
             } <= tool_names
@@ -128,6 +131,53 @@ async def test_mcp_stdio_validate_code_and_subsumes_live() -> None:
             )
             rel_payload = rel.structuredContent
             assert rel_payload["outcome"] in {"subsumes", "equivalent"}
+
+
+@pytest.mark.integration
+@pytest.mark.anyio
+async def test_mcp_stdio_snomed_expand_live() -> None:
+    _ensure_local_config()
+    async with stdio_client(_server_params()) as (read_stream, write_stream):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+            result = await _call_tool(
+                session,
+                "snomed_expand",
+                {"filter": "myocard", "count": 5, "summary_only": True},
+            )
+            payload = result.structuredContent
+            assert "terminology" in payload
+            assert payload["summary_only"] is True
+            assert payload["count"] == 5
+            assert "raw_contains_count" in payload
+
+
+@pytest.mark.integration
+@pytest.mark.anyio
+async def test_mcp_stdio_snowstorm_list_codesystems_and_versions_live() -> None:
+    _ensure_local_config()
+    async with stdio_client(_server_params()) as (read_stream, write_stream):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+
+            cs = await _call_tool(session, "snowstorm_list_codesystems", {})
+            cs_payload = cs.structuredContent
+            assert "terminology" in cs_payload
+            short_names = {item["short_name"] for item in cs_payload.get("code_systems", [])}
+            assert "SNOMEDCT" in short_names
+
+            versions = await _call_tool(
+                session,
+                "snowstorm_list_versions",
+                {"code_system_short_name": "SNOMEDCT"},
+            )
+            versions_payload = versions.structuredContent
+            version_values = {
+                v.get("version") or v.get("effective_date")
+                for v in versions_payload.get("versions", [])
+                if isinstance(v, dict)
+            }
+            assert "20251101" in version_values
 
 
 @pytest.mark.integration

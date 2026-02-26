@@ -10,6 +10,8 @@ uv pip install -e .[dev]
 uv run pytest -q
 ```
 
+For unit vs integration test workflows (including Docker stack setup and RF2 import), see `docs/testing.md`.
+
 ## Docker Integration Stack (Snowstorm + Lite)
 
 Start local containers for integration testing:
@@ -82,9 +84,12 @@ becomes the default automatically.
 | `server_health` | Check reachability and capabilities for a terminology |
 | `server_capabilities` | Detailed backend info for a terminology |
 | `fhir_metadata` | FHIR CapabilityStatement summary (optional raw payload) |
+| `snomed_expand` | FHIR ValueSet/$expand (implicit SNOMED ValueSet supported) |
 | `snomed_lookup` | FHIR CodeSystem/$lookup |
 | `snomed_validate_code` | FHIR CodeSystem/$validate-code |
 | `snomed_subsumes` | FHIR CodeSystem/$subsumes |
+| `snowstorm_list_codesystems` | Native Snowstorm code system summaries (Snowstorm only) |
+| `snowstorm_list_versions` | Native Snowstorm code system versions (Snowstorm only) |
 | `snowstorm_search_concepts` | Native concept search (Snowstorm only) |
 | `snowstorm_get_concept_native` | Native concept detail (Snowstorm only) |
 
