@@ -1,0 +1,54 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: snowstorm-mcp-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      node.name: snowstorm
+      cluster.name: snowstorm-cluster
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms2g -Xmx2g}
+    volumes:
+      - snowstorm_mcp_es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9200"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+    ports:
+      - "127.0.0.1:9200:9200"
+
+  snowstorm:
+    image: snomedinternational/snowstorm:latest
+    container_name: snowstorm-mcp-snowstorm
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    entrypoint:
+      - java
+      - -Xms2g
+      - -Xmx4g
+      - --add-opens
+      - java.base/java.lang=ALL-UNNAMED
+      - --add-opens=java.base/java.util=ALL-UNNAMED
+      - -cp
+      - "@/app/jib-classpath-file"
+      - org.snomed.snowstorm.SnowstormApplication
+      - --elasticsearch.urls=http://elasticsearch:9200
+    ports:
+      - "8080:8080"
+
+  snowstorm-lite:
+    image: snomedinternational/snowstorm-lite:latest
+    container_name: snowstorm-mcp-snowstorm-lite
+    command:
+      - --index.path=lucene-index/data
+      - --admin.password=${SNOWSTORM_LITE_ADMIN_PASSWORD:-snowstorm-lite-admin}
+    volumes:
+      - snowstorm_mcp_lite_index:/app/lucene-index
+    ports:
+      - "8082:8080"
+
+volumes:
+  snowstorm_mcp_es_data:
+  snowstorm_mcp_lite_index:

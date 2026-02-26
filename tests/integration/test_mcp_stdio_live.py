@@ -10,7 +10,12 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.types import CallToolResult
 
 
-CONFIG_PATH = Path(__file__).resolve().parents[2] / "examples" / "config.local.yaml"
+CONFIG_PATH = Path(
+    os.getenv(
+        "SNOWSTORM_MCP_TEST_CONFIG",
+        str(Path(__file__).resolve().parents[2] / "examples" / "config.local.yaml"),
+    )
+)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -69,6 +74,16 @@ async def test_mcp_stdio_lists_terminologies_and_capabilities() -> None:
             assert "terminology" in payload
             assert payload["capabilities"]["has_fhir"] is True
             assert payload["backend_type"] in {"snowstorm", "unknown"}
+
+            meta_summary = await _call_tool(
+                session,
+                "fhir_metadata",
+                {"include_raw": False},
+            )
+            meta_payload = meta_summary.structuredContent
+            assert "summary" in meta_payload
+            assert "metadata" not in meta_payload
+            assert meta_payload["summary"]["resourceType"] == "CapabilityStatement"
 
 
 @pytest.mark.integration

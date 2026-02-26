@@ -41,11 +41,11 @@ class HttpClient:
     ) -> None:
         self.target = target
         self._own_client = client is None
+        self._auth = _build_auth(target.auth)
+        self._headers = _build_headers(target.auth)
         self._client = client or httpx.Client(
             timeout=target.timeout_seconds,
             verify=target.verify_tls,
-            auth=_build_auth(target.auth),
-            headers=_build_headers(target.auth),
             follow_redirects=True,
         )
 
@@ -67,6 +67,7 @@ class HttpClient:
         expect_json: bool = False,
         **kwargs: Any,
     ) -> httpx.Response | dict[str, Any]:
+        kwargs = self._apply_request_defaults(kwargs)
         try:
             response = self._client.request(method, url, **kwargs)
         except httpx.TimeoutException as exc:
@@ -90,6 +91,7 @@ class HttpClient:
         return response
 
     def request_allow_error(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
+        kwargs = self._apply_request_defaults(kwargs)
         try:
             return self._client.request(method, url, **kwargs)
         except httpx.TimeoutException as exc:
@@ -97,3 +99,13 @@ class HttpClient:
         except httpx.RequestError as exc:
             raise HttpRequestError(f"Request failed: {method} {url}: {exc}") from exc
 
+    def _apply_request_defaults(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        merged = dict(kwargs)
+        if self._auth is not None and "auth" not in merged:
+            merged["auth"] = self._auth
+        if self._headers:
+            headers = dict(self._headers)
+            if "headers" in merged and merged["headers"] is not None:
+                headers.update(dict(merged["headers"]))
+            merged["headers"] = headers
+        return merged

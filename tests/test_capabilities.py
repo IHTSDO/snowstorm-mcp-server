@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import httpx
 
 from snowstorm_mcp_server.capabilities import BackendType, probe_target
@@ -7,12 +10,22 @@ from snowstorm_mcp_server.config import TargetConfig
 from snowstorm_mcp_server.http_client import HttpClient
 
 
+FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "capabilities"
+
+
+def _fixture_json(name: str) -> dict:
+    return json.loads((FIXTURE_DIR / name).read_text(encoding="utf-8"))
+
+
 def test_probe_classifies_snowstorm_from_codesystems_and_fhir() -> None:
+    fhir_metadata = _fixture_json("fhir_metadata_capability_statement.json")
+    codesystems = _fixture_json("snowstorm_codesystems.json")
+
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/fhir/metadata":
-            return httpx.Response(200, json={"resourceType": "CapabilityStatement"})
+            return httpx.Response(200, json=fhir_metadata)
         if request.url.path == "/codesystems":
-            return httpx.Response(200, json={"items": []})
+            return httpx.Response(200, json=codesystems)
         if request.url.path == "/fhir-admin/load-package":
             return httpx.Response(404)
         return httpx.Response(404)
@@ -29,9 +42,11 @@ def test_probe_classifies_snowstorm_from_codesystems_and_fhir() -> None:
 
 
 def test_probe_classifies_lite_from_fhir_and_fhir_admin() -> None:
+    fhir_metadata = _fixture_json("fhir_metadata_capability_statement.json")
+
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/fhir/metadata":
-            return httpx.Response(200, json={"resourceType": "CapabilityStatement"})
+            return httpx.Response(200, json=fhir_metadata)
         if request.url.path == "/codesystems":
             return httpx.Response(404)
         if request.url.path == "/fhir-admin/load-package":
@@ -50,9 +65,11 @@ def test_probe_classifies_lite_from_fhir_and_fhir_admin() -> None:
 
 
 def test_probe_classifies_snowstorm_when_codesystems_500_but_browser_api_works() -> None:
+    fhir_metadata = _fixture_json("fhir_metadata_capability_statement.json")
+
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/fhir/metadata":
-            return httpx.Response(200, json={"resourceType": "CapabilityStatement"})
+            return httpx.Response(200, json=fhir_metadata)
         if request.url.path == "/codesystems":
             return httpx.Response(500, json={"error": "transient"})
         if request.url.path == "/browser/MAIN/descriptions":
