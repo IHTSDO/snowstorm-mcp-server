@@ -134,6 +134,52 @@ class ServerRuntime:
             result = svc.subsumes(code_a=code_a, code_b=code_b, system=system, version=version)
         return {"terminology": info.name, **result.model_dump()}
 
+    def snomed_expand(
+        self,
+        *,
+        terminology: str | None = None,
+        value_set_url: str | None = None,
+        filter: str | None = None,
+        offset: int = 0,
+        count: int = 20,
+        summary_only: bool = False,
+        max_contains: int = 100,
+    ) -> dict[str, Any]:
+        info, target = self._resolve(terminology)
+        with SnomedLookupService(target) as svc:
+            result = svc.expand(
+                value_set_url=value_set_url,
+                filter=filter,
+                offset=offset,
+                count=count,
+                summary_only=summary_only,
+                max_contains=max_contains,
+            )
+        return {"terminology": info.name, **result.model_dump()}
+
+    def snowstorm_list_codesystems(
+        self,
+        *,
+        terminology: str | None = None,
+    ) -> dict[str, Any]:
+        info, target = self._resolve(terminology)
+        self._ensure_native_supported(info.target_name, info.name, "Snowstorm native code system listing")
+        with SnowstormNativeService(target) as svc:
+            result = svc.list_codesystems()
+        return {"terminology": info.name, **result.model_dump()}
+
+    def snowstorm_list_versions(
+        self,
+        *,
+        code_system_short_name: str,
+        terminology: str | None = None,
+    ) -> dict[str, Any]:
+        info, target = self._resolve(terminology)
+        self._ensure_native_supported(info.target_name, info.name, "Snowstorm native code system versions")
+        with SnowstormNativeService(target) as svc:
+            result = svc.list_versions(code_system_short_name=code_system_short_name)
+        return {"terminology": info.name, **result.model_dump()}
+
     def snowstorm_search_concepts(
         self,
         *,
@@ -143,12 +189,7 @@ class ServerRuntime:
         active_only: bool = True,
     ) -> dict[str, Any]:
         info, target = self._resolve(terminology)
-        status = self.registry.get_target_status(info.target_name)
-        if status and not status.capabilities.has_native_api:
-            raise UnsupportedBackendError(
-                f"Terminology '{info.name}' is on a backend that does not support "
-                "Snowstorm native concept search."
-            )
+        self._ensure_native_supported(info.target_name, info.name, "Snowstorm native concept search")
         branch = info.branch_path or "MAIN"
         with SnowstormNativeService(target) as svc:
             result = svc.search_concepts(
@@ -165,12 +206,7 @@ class ServerRuntime:
         max_synonyms: int = 15,
     ) -> dict[str, Any]:
         info, target = self._resolve(terminology)
-        status = self.registry.get_target_status(info.target_name)
-        if status and not status.capabilities.has_native_api:
-            raise UnsupportedBackendError(
-                f"Terminology '{info.name}' is on a backend that does not support "
-                "Snowstorm native concept detail."
-            )
+        self._ensure_native_supported(info.target_name, info.name, "Snowstorm native concept detail")
         branch = info.branch_path or "MAIN"
         with SnowstormNativeService(target) as svc:
             result = svc.get_concept(
@@ -180,6 +216,16 @@ class ServerRuntime:
                 max_synonyms=max_synonyms,
             )
         return {"terminology": info.name, **result.model_dump()}
+
+    def _ensure_native_supported(
+        self, target_name: str, terminology_name: str, operation_name: str
+    ) -> None:
+        status = self.registry.get_target_status(target_name)
+        if status and not status.capabilities.has_native_api:
+            raise UnsupportedBackendError(
+                f"Terminology '{terminology_name}' is on a backend that does not support "
+                f"{operation_name}."
+            )
 
 
 def _summarize_fhir_metadata(metadata: dict[str, Any] | None) -> dict[str, Any] | None:
