@@ -1,0 +1,1050 @@
+{
+    "buckets": {
+        "module": {
+            "900000000000207008": 659
+        },
+        "semanticTags": {
+            "disorder": 189,
+            "observable entity": 1,
+            "procedure": 5,
+            "finding": 16,
+            "situation": 38,
+            "record artifact": 1,
+            "qualifier value": 1
+        },
+        "language": {
+            "en": 659
+        },
+        "membership": {
+            "900000000000527005": 28,
+            "447562003": 198,
+            "900000000000524003": 6,
+            "900000000000497000": 251,
+            "733073007": 186,
+            "1292992004": 5,
+            "900000000000489007": 67,
+            "900000000000523009": 34,
+            "900000000000526001": 9,
+            "900000000000528000": 9
+        }
+    },
+    "languageNames": {
+        "en": "english"
+    },
+    "bucketConcepts": {
+        "900000000000527005": {
+            "conceptId": "900000000000527005",
+            "active": true,
+            "definitionStatus": "PRIMITIVE",
+            "moduleId": "900000000000012004",
+            "fsn": {
+                "term": "SAME AS association reference set (foundation metadata concept)",
+                "lang": "en"
+            },
+            "pt": {
+                "term": "SAME AS association reference set",
+                "lang": "en"
+            },
+            "id": "900000000000527005"
+        },
+        "447562003": {
+            "conceptId": "447562003",
+            "active": true,
+            "definitionStatus": "PRIMITIVE",
+            "moduleId": "900000000000012004",
+            "fsn": {
+                "term": "SNOMED CT to International Classification of Diseases tenth revision extended map reference set (foundation metadata concept)",
+                "lang": "en"
+            },
+            "pt": {
+                "term": "SNOMED CT to ICD-10 extended map",
+                "lang": "en"
+            },
+            "id": "447562003"
+        },
+        "900000000000524003": {
+            "conceptId": "900000000000524003",
+            "active": true,
+            "definitionStatus": "PRIMITIVE",
+            "moduleId": "900000000000012004",
+            "fsn": {
+                "term": "MOVED TO association reference set (foundation metadata concept)",
+                "lang": "en"
+            },
+            "pt": {
+                "term": "MOVED TO association reference set",
+                "lang": "en"
+            },
+            "id": "900000000000524003"
+        },
+        "900000000000497000": {
+            "conceptId": "900000000000497000",
+            "active": true,
+            "definitionStatus": "PRIMITIVE",
+            "moduleId": "900000000000012004",
+            "fsn": {
+                "term": "CTV3 to SNOMED CT simple map reference set (foundation metadata concept)",
+                "lang": "en"
+            },
+            "pt": {
+                "term": "CTV3 to SNOMED CT simple map",
+                "lang": "en"
+            },
+            "id": "900000000000497000"
+        },
+        "733073007": {
+            "conceptId": "733073007",
+            "active": true,
+            "definitionStatus": "PRIMITIVE",
+            "moduleId": "900000000000012004",
+            "fsn": {
+                "term": "OWL axiom reference set (foundation metadata concept)",
+                "lang": "en"
+            },
+            "pt": {
+                "term": "OWL axiom reference set",
+                "lang": "en"
+            },
+            "id": "733073007"
+        },
+        "1292992004": {
+            "conceptId": "1292992004",
+            "active": true,
+            "definitionStatus": "PRIMITIVE",
+            "moduleId": "900000000000012004",
+            "fsn": {
+                "term": "Component annotation with string value reference set (foundation metadata concept)",
+                "lang": "en"
+            },
+            "pt": {
+                "term": "Component annotation with string value reference set",
+                "lang": "en"
+            },
+            "id": "1292992004"
+        },
+        "900000000000489007": {
+            "conceptId": "900000000000489007",
+            "active": true,
+            "definitionStatus": "PRIMITIVE",
+            "moduleId": "900000000000012004",
+            "fsn": {
+                "term": "Concept inactivation indicator attribute value reference set (foundation metadata concept)",
+                "lang": "en"
+            },
+            "pt": {
+                "term": "Concept inactivation indicator reference set",
+                "lang": "en"
+            },
+            "id": "900000000000489007"
+        },
+        "900000000000523009": {
+            "conceptId": "900000000000523009",
+            "active": true,
+            "definitionStatus": "PRIMITIVE",
+            "moduleId": "900000000000012004",
+            "fsn": {
+                "term": "POSSIBLY EQUIVALENT TO association reference set (foundation metadata concept)",
+                "lang": "en"
+            },
+            "pt": {
+                "term": "POSSIBLY EQUIVALENT TO association reference set",
+                "lang": "en"
+            },
+            "id": "900000000000523009"
+        },
+        "900000000000526001": {
+            "conceptId": "900000000000526001",
+            "active": true,
+            "definitionStatus": "PRIMITIVE",
+            "moduleId": "900000000000012004",
+            "fsn": {
+                "term": "REPLACED BY association reference set (foundation metadata concept)",
+                "lang": "en"
+            },
+            "pt": {
+                "term": "REPLACED BY association reference set",
+                "lang": "en"
+            },
+            "id": "900000000000526001"
+        },
+        "900000000000207008": {
+            "conceptId": "900000000000207008",
+            "active": true,
+            "definitionStatus": "PRIMITIVE",
+            "moduleId": "900000000000012004",
+            "fsn": {
+                "term": "SNOMED CT core module (core metadata concept)",
+                "lang": "en"
+            },
+            "pt": {
+                "term": "SNOMED CT core",
+                "lang": "en"
+            },
+            "id": "900000000000207008"
+        },
+        "900000000000528000": {
+            "conceptId": "900000000000528000",
+            "active": true,
+            "definitionStatus": "PRIMITIVE",
+            "moduleId": "900000000000012004",
+            "fsn": {
+                "term": "WAS A association reference set (foundation metadata concept)",
+                "lang": "en"
+            },
+            "pt": {
+                "term": "WAS A association reference set",
+                "lang": "en"
+            },
+            "id": "900000000000528000"
+        }
+    },
+    "last": false,
+    "totalElements": 659,
+    "totalPages": 17,
+    "size": 40,
+    "number": 0,
+    "first": true,
+    "numberOfElements": 40,
+    "items": [
+        {
+            "term": "Myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "22298006",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "22298006"
+            }
+        },
+        {
+            "term": "Myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "66514008",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Coronary artery thrombosis (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Coronary artery thrombosis",
+                    "lang": "en"
+                },
+                "id": "66514008"
+            }
+        },
+        {
+            "term": "Myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "233824008",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "233824008"
+            }
+        },
+        {
+            "term": "Old myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "1755008",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Old myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Old myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "1755008"
+            }
+        },
+        {
+            "term": "Old myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "155306008",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Old myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Old myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "155306008"
+            }
+        },
+        {
+            "term": "FH: Myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "160361002",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "FH: ischaemic heart disease (& [myocardial infarction] or [coronary thrombosis]) (situation)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "FH: ischemic heart disease (& [myocardial infarction] or [coronary thrombosis])",
+                    "lang": "en"
+                },
+                "id": "160361002"
+            }
+        },
+        {
+            "term": "Old myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "194827005",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction: [old] or [healed] or [personal history of] (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction: [old] or [healed] or [personal history of]",
+                    "lang": "en"
+                },
+                "id": "194827005"
+            }
+        },
+        {
+            "term": "FH: Myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "266897007",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Family history: Myocardial infarction (situation)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "FH: Myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "266897007"
+            }
+        },
+        {
+            "term": "FH: Myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "137757002",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "FH: ischaemic heart disease (& [myocardial infarction] or [coronary thrombosis]) (situation)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "FH: ischemic heart disease (& [myocardial infarction] or [coronary thrombosis])",
+                    "lang": "en"
+                },
+                "id": "137757002"
+            }
+        },
+        {
+            "term": "MI - Myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "66514008",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Coronary artery thrombosis (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Coronary artery thrombosis",
+                    "lang": "en"
+                },
+                "id": "66514008"
+            }
+        },
+        {
+            "term": "ECG: myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "164865005",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Electrocardiographic myocardial infarction (finding)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "EKG: myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "164865005"
+            }
+        },
+        {
+            "term": "ECG: myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "142025003",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "ECG: myocardial infarction (finding)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "ECG: myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "142025003"
+            }
+        },
+        {
+            "term": "MI - myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "22298006",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "22298006"
+            }
+        },
+        {
+            "term": "EKG: myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "164865005",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Electrocardiographic myocardial infarction (finding)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "EKG: myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "164865005"
+            }
+        },
+        {
+            "term": "Acute myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "57054005",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Acute myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Acute myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "57054005"
+            }
+        },
+        {
+            "term": "Acute myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "155304006",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction (& [acute]) or coronary thrombosis (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction (& [acute]) or coronary thrombosis",
+                    "lang": "en"
+                },
+                "id": "155304006"
+            }
+        },
+        {
+            "term": "Acute myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "194796000",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "(Myocardial infarction (& [acute] or [silent] or [cardiac rupture following])) or (coronary thrombosis) (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "(Myocardial infarction (& [acute] or [silent] or [cardiac rupture following])) or (coronary thrombosis)",
+                    "lang": "en"
+                },
+                "id": "194796000"
+            }
+        },
+        {
+            "term": "Acute myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "266288001",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction (& [acute]) or coronary thrombosis (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction (& [acute]) or coronary thrombosis",
+                    "lang": "en"
+                },
+                "id": "266288001"
+            }
+        },
+        {
+            "term": "First myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "394710008",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "First myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "First myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "394710008"
+            }
+        },
+        {
+            "term": "First myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "393588004",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "First myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "First myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "393588004"
+            }
+        },
+        {
+            "term": "Healed myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "1755008",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Old myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Old myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "1755008"
+            }
+        },
+        {
+            "term": "Silent myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "194796000",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "(Myocardial infarction (& [acute] or [silent] or [cardiac rupture following])) or (coronary thrombosis) (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "(Myocardial infarction (& [acute] or [silent] or [cardiac rupture following])) or (coronary thrombosis)",
+                    "lang": "en"
+                },
+                "id": "194796000"
+            }
+        },
+        {
+            "term": "Healed myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "194827005",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction: [old] or [healed] or [personal history of] (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction: [old] or [healed] or [personal history of]",
+                    "lang": "en"
+                },
+                "id": "194827005"
+            }
+        },
+        {
+            "term": "Silent myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "233843008",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Silent myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Silent myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "233843008"
+            }
+        },
+        {
+            "term": "Recent myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "428752002",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Recent myocardial infarction (situation)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Recent myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "428752002"
+            }
+        },
+        {
+            "term": "Type 1 myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "726499301000119105",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction due to atherothrombotic coronary artery disease (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction due to atherothrombotic coronary artery disease",
+                    "lang": "en"
+                },
+                "id": "726499301000119105"
+            }
+        },
+        {
+            "term": "Type 2 myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "16837681000119104",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction due to demand ischemia (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction due to demand ischemia",
+                    "lang": "en"
+                },
+                "id": "16837681000119104"
+            }
+        },
+        {
+            "term": "Aborted myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "194815007",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Aborted myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Aborted myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "194815007"
+            }
+        },
+        {
+            "term": "ECG: no myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "164866006",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Electrocardiogram: no myocardial infarction (finding)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "ECG: no myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "164866006"
+            }
+        },
+        {
+            "term": "ECG: no myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "142026002",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "ECG: no myocardial infarction (finding)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "ECG: no myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "142026002"
+            }
+        },
+        {
+            "term": "Aborted myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "194821006",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Coronary thrombosis not resulting in myocardial infarction (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Coronary thrombosis not resulting in myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "194821006"
+            }
+        },
+        {
+            "term": "Type 4a myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "1371148009",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction following percutaneous coronary intervention (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction following percutaneous coronary intervention",
+                    "lang": "en"
+                },
+                "id": "1371148009"
+            }
+        },
+        {
+            "term": "MI/Acute myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "155304006",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction (& [acute]) or coronary thrombosis (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction (& [acute]) or coronary thrombosis",
+                    "lang": "en"
+                },
+                "id": "155304006"
+            }
+        },
+        {
+            "term": "FH: Myocardial infarction < 60",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "160358003",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "FH: Ischaemic heart disease <60 (& [myocardial infarction] or [angina]) (situation)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "FH: Ischemic heart disease <60 (& [myocardial infarction] or [angina])",
+                    "lang": "en"
+                },
+                "id": "160358003"
+            }
+        },
+        {
+            "term": "FH: Myocardial infarction > 60",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "160359006",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "FH: Ischaemic heart disease >60 (& [myocardial infarction] or [angina]) (situation)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "FH: Ischemic heart disease >60 (& [myocardial infarction] or [angina])",
+                    "lang": "en"
+                },
+                "id": "160359006"
+            }
+        },
+        {
+            "term": "MI/Acute myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "266288001",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction (& [acute]) or coronary thrombosis (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction (& [acute]) or coronary thrombosis",
+                    "lang": "en"
+                },
+                "id": "266288001"
+            }
+        },
+        {
+            "term": "ECG: old myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "164867002",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Electrocardiographic old myocardial infarction (finding)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "EKG: old myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "164867002"
+            }
+        },
+        {
+            "term": "ECG: old myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "142027006",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "ECG: old myocardial infarction (finding)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "ECG: old myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "142027006"
+            }
+        },
+        {
+            "term": "EKG: old myocardial infarction",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "164867002",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Electrocardiographic old myocardial infarction (finding)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "EKG: old myocardial infarction",
+                    "lang": "en"
+                },
+                "id": "164867002"
+            }
+        },
+        {
+            "term": "Myocardial infarction education",
+            "active": true,
+            "languageCode": "en",
+            "module": "900000000000207008",
+            "concept": {
+                "conceptId": "113155009",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial infarction education (procedure)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial infarction education",
+                    "lang": "en"
+                },
+                "id": "113155009"
+            }
+        }
+    ]
+}

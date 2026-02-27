@@ -15,6 +15,7 @@ CONFIG_PATH = Path(
         str(Path(__file__).resolve().parents[2] / "examples" / "config.local.yaml"),
     )
 )
+MYOCARDIAL_INFARCTION = ("22298006", "Myocardial infarction")
 
 
 @pytest.mark.integration
@@ -25,11 +26,12 @@ def test_snowstorm_native_search_finds_myocardial_infarction() -> None:
     if "snowstorm" not in targets:
         pytest.skip("snowstorm target missing in local config")
 
+    mi_code, mi_desc = MYOCARDIAL_INFARCTION
     with SnowstormNativeService(targets["snowstorm"]) as svc:
         result = svc.search_concepts(term="myocardial infarction", limit=10, active_only=True)
 
     assert result.returned >= 1
     concept_ids = {hit.concept_id for hit in result.hits}
-    assert "22298006" in concept_ids
+    assert mi_code in concept_ids, mi_desc
     top_text = " ".join([(result.hits[0].pt or ""), (result.hits[0].fsn or ""), (result.hits[0].matched_term or "")]).lower()
     assert "myocardial infarction" in top_text

@@ -1,0 +1,75 @@
+{
+    "resourceType": "ValueSet",
+    "id": "c1765d9d-2cee-476b-a797-6b6f37321fcc",
+    "url": "http://snomed.info/sct?fhir_vs",
+    "status": "active",
+    "copyright": "This value set includes content from SNOMED CT, which is copyright \u00a9 2002+ International Health Terminology Standards Development Organisation (SNOMED International), and distributed by agreement between SNOMED International and HL7. Implementer use of SNOMED CT is not covered by this agreement.",
+    "expansion": {
+        "id": "d50437a2-2870-4fe7-a0cd-82ca9f60768e",
+        "timestamp": "2026-02-26T17:19:20+00:00",
+        "total": 179,
+        "offset": 0,
+        "parameter": [
+            {
+                "name": "version",
+                "valueUri": "http://snomed.info/sct|http://snomed.info/sct/900000000000207008/version/20251101"
+            },
+            {
+                "name": "displayLanguage",
+                "valueString": "en"
+            }
+        ],
+        "contains": [
+            {
+                "system": "http://snomed.info/sct",
+                "code": "22298006",
+                "display": "Myocardial infarction"
+            },
+            {
+                "system": "http://snomed.info/sct",
+                "code": "1755008",
+                "display": "Old myocardial infarction"
+            },
+            {
+                "system": "http://snomed.info/sct",
+                "code": "266897007",
+                "display": "FH: Myocardial infarction"
+            },
+            {
+                "system": "http://snomed.info/sct",
+                "code": "164865005",
+                "display": "ECG: myocardial infarction"
+            },
+            {
+                "system": "http://snomed.info/sct",
+                "code": "57054005",
+                "display": "Acute myocardial infarction"
+            },
+            {
+                "system": "http://snomed.info/sct",
+                "code": "394710008",
+                "display": "First myocardial infarction"
+            },
+            {
+                "system": "http://snomed.info/sct",
+                "code": "233843008",
+                "display": "Silent myocardial infarction"
+            },
+            {
+                "system": "http://snomed.info/sct",
+                "code": "428752002",
+                "display": "Recent myocardial infarction"
+            },
+            {
+                "system": "http://snomed.info/sct",
+                "code": "726499301000119105",
+                "display": "Myocardial infarction due to atherothrombotic coronary artery disease"
+            },
+            {
+                "system": "http://snomed.info/sct",
+                "code": "16837681000119104",
+                "display": "Myocardial infarction due to demand ischemia"
+            }
+        ]
+    }
+}

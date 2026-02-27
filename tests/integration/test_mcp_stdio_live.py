@@ -17,6 +17,9 @@ CONFIG_PATH = Path(
     )
 )
 REPO_ROOT = Path(__file__).resolve().parents[2]
+CLINICAL_FINDING = ("404684003", "Clinical finding")
+MYOCARDIAL_INFARCTION = ("22298006", "Myocardial infarction")
+ACUTE_MYOCARDIAL_INFARCTION = ("57054005", "Acute myocardial infarction")
 
 
 def _ensure_local_config() -> None:
@@ -93,17 +96,18 @@ async def test_mcp_stdio_lists_terminologies_and_capabilities() -> None:
 @pytest.mark.anyio
 async def test_mcp_stdio_snomed_lookup_live() -> None:
     _ensure_local_config()
+    clinical_finding_code, _clinical_finding_desc = CLINICAL_FINDING
     async with stdio_client(_server_params()) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             result = await _call_tool(
                 session,
                 "snomed_lookup",
-                {"code": "404684003"},
+                {"code": clinical_finding_code},
             )
             payload = result.structuredContent
             assert "terminology" in payload
-            assert payload["code"] == "404684003"
+            assert payload["code"] == clinical_finding_code
             assert "clinical finding" in (payload.get("display") or "").lower()
 
 
@@ -111,6 +115,9 @@ async def test_mcp_stdio_snomed_lookup_live() -> None:
 @pytest.mark.anyio
 async def test_mcp_stdio_validate_code_and_subsumes_live() -> None:
     _ensure_local_config()
+    clinical_finding_code, _clinical_finding_desc = CLINICAL_FINDING
+    mi_code, mi_desc = MYOCARDIAL_INFARCTION
+    ami_code, ami_desc = ACUTE_MYOCARDIAL_INFARCTION
     async with stdio_client(_server_params()) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
@@ -118,19 +125,19 @@ async def test_mcp_stdio_validate_code_and_subsumes_live() -> None:
             valid = await _call_tool(
                 session,
                 "snomed_validate_code",
-                {"code": "404684003"},
+                {"code": clinical_finding_code},
             )
             valid_payload = valid.structuredContent
             assert valid_payload["result"] is True
-            assert valid_payload["code"] == "404684003"
+            assert valid_payload["code"] == clinical_finding_code
 
             rel = await _call_tool(
                 session,
                 "snomed_subsumes",
-                {"code_a": "22298006", "code_b": "57054005"},
+                {"code_a": mi_code, "code_b": ami_code},
             )
             rel_payload = rel.structuredContent
-            assert rel_payload["outcome"] in {"subsumes", "equivalent"}
+            assert rel_payload["outcome"] in {"subsumes", "equivalent"}, f"{mi_desc} vs {ami_desc}"
 
 
 @pytest.mark.integration
@@ -184,6 +191,7 @@ async def test_mcp_stdio_snowstorm_list_codesystems_and_versions_live() -> None:
 @pytest.mark.anyio
 async def test_mcp_stdio_snowstorm_search_concepts_live() -> None:
     _ensure_local_config()
+    mi_code, mi_desc = MYOCARDIAL_INFARCTION
     async with stdio_client(_server_params()) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
@@ -196,23 +204,24 @@ async def test_mcp_stdio_snowstorm_search_concepts_live() -> None:
             payload = search_ok.structuredContent or {}
             assert "terminology" in payload
             concept_ids = {hit["concept_id"] for hit in payload.get("hits", [])}
-            assert "22298006" in concept_ids
+            assert mi_code in concept_ids, mi_desc
 
 
 @pytest.mark.integration
 @pytest.mark.anyio
 async def test_mcp_stdio_snowstorm_get_concept_native_live() -> None:
     _ensure_local_config()
+    mi_code, _mi_desc = MYOCARDIAL_INFARCTION
     async with stdio_client(_server_params()) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
 
             detail = await session.call_tool(
                 "snowstorm_get_concept_native",
-                {"concept_id": "22298006", "max_synonyms": 20},
+                {"concept_id": mi_code, "max_synonyms": 20},
             )
             assert detail.isError is False, f"detail failed: {detail}"
             payload = detail.structuredContent or {}
-            assert payload["concept_id"] == "22298006"
+            assert payload["concept_id"] == mi_code
             assert payload["semantic_tag"] == "disorder"
             assert any("heart attack" in s.lower() for s in payload.get("synonyms", []))

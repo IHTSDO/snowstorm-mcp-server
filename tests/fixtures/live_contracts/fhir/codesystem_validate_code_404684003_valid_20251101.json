@@ -1,0 +1,25 @@
+{
+    "resourceType": "Parameters",
+    "parameter": [
+        {
+            "name": "result",
+            "valueBoolean": true
+        },
+        {
+            "name": "display",
+            "valueString": "Clinical finding"
+        },
+        {
+            "name": "inactive",
+            "valueBoolean": false
+        },
+        {
+            "name": "system",
+            "valueString": "http://snomed.info/sct"
+        },
+        {
+            "name": "version",
+            "valueString": "http://snomed.info/sct/900000000000207008/version/20251101"
+        }
+    ]
+}

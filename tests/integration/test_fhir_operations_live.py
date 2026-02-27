@@ -17,6 +17,11 @@ CONFIG_PATH = Path(
     )
 )
 
+CLINICAL_FINDING = ("404684003", "Clinical finding")
+MYOCARDIAL_INFARCTION = ("22298006", "Myocardial infarction")
+ACUTE_MYOCARDIAL_INFARCTION = ("57054005", "Acute myocardial infarction")
+INVALID_TEST_CODE = ("999999999999999999", "Deliberately invalid test code")
+
 
 def _load_targets():
     if not CONFIG_PATH.exists():
@@ -41,9 +46,11 @@ def test_validate_code_live(target_name: str) -> None:
     targets = _load_targets()
     if target_name not in targets:
         pytest.skip(f"Target {target_name} missing in local config")
+    clinical_finding_code, _clinical_finding_desc = CLINICAL_FINDING
+    invalid_code, _invalid_desc = INVALID_TEST_CODE
     with SnomedLookupService(targets[target_name]) as svc:
-        valid = svc.validate_code(code="404684003")
-        invalid = svc.validate_code(code="999999999999999999")
+        valid = svc.validate_code(code=clinical_finding_code)
+        invalid = svc.validate_code(code=invalid_code)
 
     assert valid.result is True
     assert "clinical finding" in (valid.display or "").lower()
@@ -56,19 +63,23 @@ def test_subsumes_live(target_name: str) -> None:
     targets = _load_targets()
     if target_name not in targets:
         pytest.skip(f"Target {target_name} missing in local config")
+    mi_code, mi_desc = MYOCARDIAL_INFARCTION
+    ami_code, ami_desc = ACUTE_MYOCARDIAL_INFARCTION
     with SnomedLookupService(targets[target_name]) as svc:
         # Myocardial infarction subsumes Acute myocardial infarction.
-        rel = svc.subsumes(code_a="22298006", code_b="57054005")
+        rel = svc.subsumes(code_a=mi_code, code_b=ami_code)
 
-    assert rel.outcome in {"subsumes", "equivalent"}
+    assert rel.outcome in {"subsumes", "equivalent"}, f"{mi_desc} vs {ami_desc}"
 
 
 @pytest.mark.integration
 def test_validate_code_live_on_lite_target_if_available() -> None:
     _target_name, target = _find_target_by_backend(BackendType.LITE)
+    clinical_finding_code, _clinical_finding_desc = CLINICAL_FINDING
+    invalid_code, _invalid_desc = INVALID_TEST_CODE
     with SnomedLookupService(target) as svc:
-        valid = svc.validate_code(code="404684003")
-        invalid = svc.validate_code(code="999999999999999999")
+        valid = svc.validate_code(code=clinical_finding_code)
+        invalid = svc.validate_code(code=invalid_code)
 
     assert valid.result is True
     assert "clinical finding" in (valid.display or "").lower()
@@ -78,7 +89,9 @@ def test_validate_code_live_on_lite_target_if_available() -> None:
 @pytest.mark.integration
 def test_subsumes_live_on_lite_target_if_available() -> None:
     _target_name, target = _find_target_by_backend(BackendType.LITE)
+    mi_code, mi_desc = MYOCARDIAL_INFARCTION
+    ami_code, ami_desc = ACUTE_MYOCARDIAL_INFARCTION
     with SnomedLookupService(target) as svc:
-        rel = svc.subsumes(code_a="22298006", code_b="57054005")
+        rel = svc.subsumes(code_a=mi_code, code_b=ami_code)
 
-    assert rel.outcome in {"subsumes", "equivalent"}
+    assert rel.outcome in {"subsumes", "equivalent"}, f"{mi_desc} vs {ami_desc}"

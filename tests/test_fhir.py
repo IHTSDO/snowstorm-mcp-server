@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from typing import Any
+from pathlib import Path
 
 import httpx
 import pytest
@@ -13,6 +15,11 @@ from snowstorm_mcp_server.http_client import HttpClient, HttpRequestError
 def _make_service(target: TargetConfig, handler) -> SnomedLookupService:
     raw = httpx.Client(transport=httpx.MockTransport(handler), base_url=target.base_url)
     return SnomedLookupService(target, client=HttpClient(target, client=raw))
+
+
+def _load_json_fixture(path: str) -> dict:
+    fixture_path = Path(__file__).parent / "fixtures" / path
+    return json.loads(fixture_path.read_text(encoding="utf-8"))
 
 
 def test_expand_uses_implicit_snomed_valueset_and_parses_contains() -> None:
@@ -64,6 +71,74 @@ def test_expand_uses_implicit_snomed_valueset_and_parses_contains() -> None:
     assert result.contains[0].code == "22298006"
 
 
+def test_lookup_parses_real_parameters_payload_fixture() -> None:
+    target = TargetConfig(base_url="http://test")
+    payload = _load_json_fixture("live_contracts/fhir/codesystem_lookup_404684003_20251101.json")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
+
+    with _make_service(target, handler) as svc:
+        result = svc.lookup(code="404684003")
+
+    assert result.code == "404684003"
+    assert result.system == "http://snomed.info/sct"
+    assert result.version and "20251101" in result.version
+    assert result.display and "clinical finding" in result.display.lower()
+    assert "display" in result.raw_parameters
+
+
+def test_validate_code_parses_real_valid_payload_fixture() -> None:
+    target = TargetConfig(base_url="http://test")
+    payload = _load_json_fixture("live_contracts/fhir/codesystem_validate_code_404684003_valid_20251101.json")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
+
+    with _make_service(target, handler) as svc:
+        result = svc.validate_code(code="404684003")
+
+    assert result.code == "404684003"
+    assert result.result is True
+    assert result.display and "clinical finding" in result.display.lower()
+    assert result.system == "http://snomed.info/sct"
+    assert result.version and "20251101" in result.version
+
+
+def test_validate_code_parses_real_invalid_payload_fixture() -> None:
+    target = TargetConfig(base_url="http://test")
+    payload = _load_json_fixture("live_contracts/fhir/codesystem_validate_code_invalid_20251101.json")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
+
+    with _make_service(target, handler) as svc:
+        result = svc.validate_code(code="999999999999999999")
+
+    assert result.code == "999999999999999999"
+    assert result.result is False
+    assert result.system == "http://snomed.info/sct"
+    assert result.version and "20251101" in result.version
+    assert result.message and "not found" in result.message.lower()
+
+
+def test_subsumes_parses_real_parameters_payload_fixture() -> None:
+    target = TargetConfig(base_url="http://test")
+    payload = _load_json_fixture("live_contracts/fhir/codesystem_subsumes_22298006_57054005_20251101.json")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
+
+    with _make_service(target, handler) as svc:
+        result = svc.subsumes(code_a="22298006", code_b="57054005")
+
+    assert result.code_a == "22298006"
+    assert result.code_b == "57054005"
+    assert result.outcome == "subsumes"
+    assert result.system == "http://snomed.info/sct"
+    assert result.version and "20251101" in result.version
+
+
 def test_expand_summary_mode_omits_contains_but_reports_raw_count() -> None:
     target = TargetConfig(base_url="http://test")
 
@@ -87,6 +162,43 @@ def test_expand_summary_mode_omits_contains_but_reports_raw_count() -> None:
     assert result.returned == 0
     assert result.raw_contains_count == 50
     assert result.truncated is False
+
+
+def test_validate_code_falls_back_to_lookup_when_not_supported() -> None:
+    target = TargetConfig(base_url="http://test")
+    lookup_payload = _load_json_fixture("live_contracts/fhir/codesystem_lookup_404684003_20251101.json")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/CodeSystem/$validate-code"):
+            return httpx.Response(400, text="OperationOutcome: not-supported")
+        if request.url.path.endswith("/CodeSystem/$lookup"):
+            return httpx.Response(200, json=lookup_payload)
+        return httpx.Response(404)
+
+    with _make_service(target, handler) as svc:
+        result = svc.validate_code(code="404684003")
+
+    assert result.result is True
+    assert result.display and "clinical finding" in result.display.lower()
+    assert result.message and "lookup fallback" in result.message.lower()
+
+
+def test_validate_code_fallback_maps_lookup_not_found_to_false() -> None:
+    target = TargetConfig(base_url="http://test")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/CodeSystem/$validate-code"):
+            return httpx.Response(400, text="OperationOutcome: not-supported")
+        if request.url.path.endswith("/CodeSystem/$lookup"):
+            return httpx.Response(404, text="not found")
+        return httpx.Response(404)
+
+    with _make_service(target, handler) as svc:
+        result = svc.validate_code(code="999999999999999999")
+
+    assert result.result is False
+    assert result.code == "999999999999999999"
+    assert result.message and "lookup fallback" in result.message.lower()
 
 
 def test_expand_respects_server_reported_zero_offset() -> None:
@@ -139,3 +251,25 @@ def test_expand_requires_valueset_response() -> None:
     with _make_service(target, handler) as svc:
         with pytest.raises(HttpRequestError, match="ValueSet"):
             svc.expand()
+
+
+def test_expand_parses_real_valueset_expand_payload_fixture() -> None:
+    target = TargetConfig(base_url="http://test")
+    payload = _load_json_fixture(
+        "live_contracts/fhir/valueset_expand_snomed_myocardial_infarction_20251101.json"
+    )
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
+
+    with _make_service(target, handler) as svc:
+        result = svc.expand(filter="myocardial infarction", count=10)
+
+    assert result.offset == 0
+    assert result.count == 10
+    assert result.total is not None and result.total >= 10
+    assert result.returned == 10
+    assert result.raw_contains_count == 10
+    assert result.truncated is False
+    codes = {item.code for item in result.contains}
+    assert "22298006" in codes

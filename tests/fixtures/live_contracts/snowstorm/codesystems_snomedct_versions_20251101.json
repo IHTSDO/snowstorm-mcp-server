@@ -1,0 +1,16 @@
+{
+    "items": [
+        {
+            "shortName": "SNOMEDCT",
+            "importDate": "2026-02-24T19:26:55.376Z",
+            "parentBranchPath": "MAIN",
+            "effectiveDate": 20251101,
+            "version": "2025-11-01",
+            "description": "SNOMEDCT 20251101 import.",
+            "branchPath": "MAIN/2025-11-01"
+        }
+    ],
+    "total": 1,
+    "limit": 1,
+    "offset": 0
+}
