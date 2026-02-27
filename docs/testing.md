@@ -50,6 +50,12 @@ SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-integration.yaml \
   ./.venv/bin/pytest -q tests/integration
 ```
 
+Capture real endpoint payloads for parser contract fixtures (optional but recommended when adding new parsers/normalizers):
+
+```bash
+dev/integration/capture_live_contract_fixtures.sh --rf2-tag 20251101
+```
+
 ## Notes
 
 - Tests under `tests/integration/` are marked with `@pytest.mark.integration`.

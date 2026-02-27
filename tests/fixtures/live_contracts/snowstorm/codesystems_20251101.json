@@ -1,0 +1,78 @@
+{
+    "items": [
+        {
+            "shortName": "SNOMEDCT",
+            "branchPath": "MAIN",
+            "dailyBuildAvailable": false,
+            "latestVersion": {
+                "shortName": "SNOMEDCT",
+                "importDate": "2026-02-24T19:26:55.376Z",
+                "parentBranchPath": "MAIN",
+                "effectiveDate": 20251101,
+                "version": "2025-11-01",
+                "description": "SNOMEDCT 20251101 import.",
+                "branchPath": "MAIN/2025-11-01"
+            },
+            "languages": {
+                "en": "English"
+            },
+            "modules": [
+                {
+                    "conceptId": "900000000000012004",
+                    "active": true,
+                    "definitionStatus": "PRIMITIVE",
+                    "moduleId": "900000000000012004",
+                    "effectiveTime": "20020131",
+                    "fsn": {
+                        "term": "SNOMED CT model component module (core metadata concept)",
+                        "lang": "en"
+                    },
+                    "pt": {
+                        "term": "SNOMED CT model component",
+                        "lang": "en"
+                    },
+                    "id": "900000000000012004",
+                    "idAndFsnTerm": "900000000000012004 | SNOMED CT model component module (core metadata concept) |"
+                },
+                {
+                    "conceptId": "449080006",
+                    "active": true,
+                    "definitionStatus": "PRIMITIVE",
+                    "moduleId": "900000000000012004",
+                    "effectiveTime": "20110731",
+                    "fsn": {
+                        "term": "SNOMED CT to ICD-10 rule-based mapping module (core metadata concept)",
+                        "lang": "en"
+                    },
+                    "pt": {
+                        "term": "SNOMED CT to ICD-10 rule-based mapping module",
+                        "lang": "en"
+                    },
+                    "id": "449080006",
+                    "idAndFsnTerm": "449080006 | SNOMED CT to ICD-10 rule-based mapping module (core metadata concept) |"
+                },
+                {
+                    "conceptId": "900000000000207008",
+                    "active": true,
+                    "definitionStatus": "PRIMITIVE",
+                    "moduleId": "900000000000012004",
+                    "effectiveTime": "20020131",
+                    "fsn": {
+                        "term": "SNOMED CT core module (core metadata concept)",
+                        "lang": "en"
+                    },
+                    "pt": {
+                        "term": "SNOMED CT core",
+                        "lang": "en"
+                    },
+                    "id": "900000000000207008",
+                    "idAndFsnTerm": "900000000000207008 | SNOMED CT core module (core metadata concept) |"
+                }
+            ],
+            "userRoles": []
+        }
+    ],
+    "total": 1,
+    "limit": 1,
+    "offset": 0
+}

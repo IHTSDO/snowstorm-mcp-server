@@ -1,0 +1,1039 @@
+{
+    "conceptId": "22298006",
+    "fsn": {
+        "term": "Myocardial infarction (disorder)",
+        "lang": "en"
+    },
+    "pt": {
+        "term": "Myocardial infarction",
+        "lang": "en"
+    },
+    "active": true,
+    "effectiveTime": "20020131",
+    "released": true,
+    "releasedEffectiveTime": 20020131,
+    "moduleId": "900000000000207008",
+    "definitionStatus": "FULLY_DEFINED",
+    "descriptions": [
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20190131,
+            "descriptionId": "1784872019",
+            "term": "MI - Myocardial infarction",
+            "conceptId": "22298006",
+            "typeId": "900000000000013009",
+            "acceptabilityMap": {},
+            "type": "SYNONYM",
+            "inactivationIndicator": "ERRONEOUS",
+            "lang": "en",
+            "caseSignificance": "ENTIRE_TERM_CASE_SENSITIVE",
+            "effectiveTime": "20190131"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20020131,
+            "descriptionId": "37437017",
+            "term": "Myocardial infarction, NOS",
+            "conceptId": "22298006",
+            "typeId": "900000000000013009",
+            "acceptabilityMap": {},
+            "type": "SYNONYM",
+            "lang": "en",
+            "caseSignificance": "INITIAL_CHARACTER_CASE_INSENSITIVE",
+            "effectiveTime": "20020131"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20020131,
+            "descriptionId": "37439019",
+            "term": "Cardiac infarction, NOS",
+            "conceptId": "22298006",
+            "typeId": "900000000000013009",
+            "acceptabilityMap": {},
+            "type": "SYNONYM",
+            "lang": "en",
+            "caseSignificance": "INITIAL_CHARACTER_CASE_INSENSITIVE",
+            "effectiveTime": "20020131"
+        },
+        {
+            "active": true,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20170731,
+            "descriptionId": "37436014",
+            "term": "Myocardial infarction",
+            "conceptId": "22298006",
+            "typeId": "900000000000013009",
+            "acceptabilityMap": {
+                "900000000000509007": "PREFERRED",
+                "900000000000508004": "PREFERRED"
+            },
+            "type": "SYNONYM",
+            "lang": "en",
+            "caseSignificance": "CASE_INSENSITIVE",
+            "effectiveTime": "20170731"
+        },
+        {
+            "active": true,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20170731,
+            "descriptionId": "37442013",
+            "term": "Cardiac infarction",
+            "conceptId": "22298006",
+            "typeId": "900000000000013009",
+            "acceptabilityMap": {
+                "900000000000509007": "ACCEPTABLE",
+                "900000000000508004": "ACCEPTABLE"
+            },
+            "type": "SYNONYM",
+            "lang": "en",
+            "caseSignificance": "CASE_INSENSITIVE",
+            "effectiveTime": "20170731"
+        },
+        {
+            "active": true,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20170731,
+            "descriptionId": "37443015",
+            "term": "Heart attack",
+            "conceptId": "22298006",
+            "typeId": "900000000000013009",
+            "acceptabilityMap": {
+                "900000000000509007": "ACCEPTABLE",
+                "900000000000508004": "ACCEPTABLE"
+            },
+            "type": "SYNONYM",
+            "lang": "en",
+            "caseSignificance": "CASE_INSENSITIVE",
+            "effectiveTime": "20170731"
+        },
+        {
+            "active": true,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20170731,
+            "descriptionId": "751689013",
+            "term": "Myocardial infarction (disorder)",
+            "conceptId": "22298006",
+            "typeId": "900000000000003001",
+            "acceptabilityMap": {
+                "900000000000509007": "PREFERRED",
+                "900000000000508004": "PREFERRED"
+            },
+            "type": "FSN",
+            "lang": "en",
+            "caseSignificance": "CASE_INSENSITIVE",
+            "effectiveTime": "20170731"
+        },
+        {
+            "active": true,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20190131,
+            "descriptionId": "3726632018",
+            "term": "MI - myocardial infarction",
+            "conceptId": "22298006",
+            "typeId": "900000000000013009",
+            "acceptabilityMap": {
+                "900000000000509007": "ACCEPTABLE",
+                "900000000000508004": "ACCEPTABLE"
+            },
+            "type": "SYNONYM",
+            "lang": "en",
+            "caseSignificance": "ENTIRE_TERM_CASE_SENSITIVE",
+            "effectiveTime": "20190131"
+        },
+        {
+            "active": true,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20170731,
+            "descriptionId": "37441018",
+            "term": "Infarction of heart",
+            "conceptId": "22298006",
+            "typeId": "900000000000013009",
+            "acceptabilityMap": {
+                "900000000000509007": "ACCEPTABLE",
+                "900000000000508004": "ACCEPTABLE"
+            },
+            "type": "SYNONYM",
+            "lang": "en",
+            "caseSignificance": "CASE_INSENSITIVE",
+            "effectiveTime": "20170731"
+        },
+        {
+            "active": true,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20170731,
+            "descriptionId": "1784873012",
+            "term": "Myocardial infarct",
+            "conceptId": "22298006",
+            "typeId": "900000000000013009",
+            "acceptabilityMap": {
+                "900000000000509007": "ACCEPTABLE",
+                "900000000000508004": "ACCEPTABLE"
+            },
+            "type": "SYNONYM",
+            "lang": "en",
+            "caseSignificance": "CASE_INSENSITIVE",
+            "effectiveTime": "20170731"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20020131,
+            "descriptionId": "37440017",
+            "term": "Heart attack, NOS",
+            "conceptId": "22298006",
+            "typeId": "900000000000013009",
+            "acceptabilityMap": {},
+            "type": "SYNONYM",
+            "lang": "en",
+            "caseSignificance": "INITIAL_CHARACTER_CASE_INSENSITIVE",
+            "effectiveTime": "20020131"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20020131,
+            "descriptionId": "37438010",
+            "term": "Infarction of heart, NOS",
+            "conceptId": "22298006",
+            "typeId": "900000000000013009",
+            "acceptabilityMap": {},
+            "type": "SYNONYM",
+            "lang": "en",
+            "caseSignificance": "INITIAL_CHARACTER_CASE_INSENSITIVE",
+            "effectiveTime": "20020131"
+        }
+    ],
+    "annotations": [],
+    "classAxioms": [
+        {
+            "axiomId": "9a79292f-b270-4a4e-ac60-3706fd6d8459",
+            "moduleId": "900000000000207008",
+            "active": true,
+            "released": true,
+            "definitionStatusId": "900000000000073002",
+            "relationships": [
+                {
+                    "active": true,
+                    "moduleId": "900000000000207008",
+                    "released": false,
+                    "sourceId": "22298006",
+                    "destinationId": "64572001",
+                    "typeId": "116680003",
+                    "type": {
+                        "conceptId": "116680003",
+                        "active": true,
+                        "definitionStatus": "PRIMITIVE",
+                        "moduleId": "900000000000012004",
+                        "fsn": {
+                            "term": "Is a (attribute)",
+                            "lang": "en"
+                        },
+                        "pt": {
+                            "term": "Is a",
+                            "lang": "en"
+                        },
+                        "id": "116680003"
+                    },
+                    "target": {
+                        "conceptId": "64572001",
+                        "active": true,
+                        "definitionStatus": "PRIMITIVE",
+                        "moduleId": "900000000000207008",
+                        "fsn": {
+                            "term": "Disease (disorder)",
+                            "lang": "en"
+                        },
+                        "pt": {
+                            "term": "Disease",
+                            "lang": "en"
+                        },
+                        "id": "64572001"
+                    },
+                    "groupId": 0,
+                    "modifier": "EXISTENTIAL",
+                    "characteristicType": "STATED_RELATIONSHIP"
+                },
+                {
+                    "active": true,
+                    "moduleId": "900000000000207008",
+                    "released": false,
+                    "sourceId": "22298006",
+                    "destinationId": "74281007",
+                    "typeId": "363698007",
+                    "type": {
+                        "conceptId": "363698007",
+                        "active": true,
+                        "definitionStatus": "PRIMITIVE",
+                        "moduleId": "900000000000012004",
+                        "fsn": {
+                            "term": "Finding site (attribute)",
+                            "lang": "en"
+                        },
+                        "pt": {
+                            "term": "Finding site",
+                            "lang": "en"
+                        },
+                        "id": "363698007"
+                    },
+                    "target": {
+                        "conceptId": "74281007",
+                        "active": true,
+                        "definitionStatus": "PRIMITIVE",
+                        "moduleId": "900000000000207008",
+                        "fsn": {
+                            "term": "Myocardium structure (body structure)",
+                            "lang": "en"
+                        },
+                        "pt": {
+                            "term": "Myocardium structure",
+                            "lang": "en"
+                        },
+                        "id": "74281007"
+                    },
+                    "groupId": 1,
+                    "modifier": "EXISTENTIAL",
+                    "characteristicType": "STATED_RELATIONSHIP"
+                },
+                {
+                    "active": true,
+                    "moduleId": "900000000000207008",
+                    "released": false,
+                    "sourceId": "22298006",
+                    "destinationId": "55641003",
+                    "typeId": "116676008",
+                    "type": {
+                        "conceptId": "116676008",
+                        "active": true,
+                        "definitionStatus": "PRIMITIVE",
+                        "moduleId": "900000000000012004",
+                        "fsn": {
+                            "term": "Associated morphology (attribute)",
+                            "lang": "en"
+                        },
+                        "pt": {
+                            "term": "Associated morphology",
+                            "lang": "en"
+                        },
+                        "id": "116676008"
+                    },
+                    "target": {
+                        "conceptId": "55641003",
+                        "active": true,
+                        "definitionStatus": "PRIMITIVE",
+                        "moduleId": "900000000000207008",
+                        "fsn": {
+                            "term": "Infarct (morphologic abnormality)",
+                            "lang": "en"
+                        },
+                        "pt": {
+                            "term": "Infarct",
+                            "lang": "en"
+                        },
+                        "id": "55641003"
+                    },
+                    "groupId": 1,
+                    "modifier": "EXISTENTIAL",
+                    "characteristicType": "STATED_RELATIONSHIP"
+                }
+            ],
+            "id": "9a79292f-b270-4a4e-ac60-3706fd6d8459",
+            "definitionStatus": "FULLY_DEFINED",
+            "effectiveTime": 20190731
+        }
+    ],
+    "gciAxioms": [],
+    "relationships": [
+        {
+            "active": true,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20120131,
+            "relationshipId": "4598075029",
+            "sourceId": "22298006",
+            "destinationId": "414545008",
+            "typeId": "116680003",
+            "type": {
+                "conceptId": "116680003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Is a (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Is a",
+                    "lang": "en"
+                },
+                "id": "116680003"
+            },
+            "target": {
+                "conceptId": "414545008",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Ischemic heart disease (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Ischemic heart disease",
+                    "lang": "en"
+                },
+                "id": "414545008"
+            },
+            "groupId": 0,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "INFERRED_RELATIONSHIP",
+            "effectiveTime": "20120131",
+            "id": "4598075029"
+        },
+        {
+            "active": true,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20150131,
+            "relationshipId": "2689546029",
+            "sourceId": "22298006",
+            "destinationId": "251061000",
+            "typeId": "116680003",
+            "type": {
+                "conceptId": "116680003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Is a (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Is a",
+                    "lang": "en"
+                },
+                "id": "116680003"
+            },
+            "target": {
+                "conceptId": "251061000",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial necrosis (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial necrosis",
+                    "lang": "en"
+                },
+                "id": "251061000"
+            },
+            "groupId": 0,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "INFERRED_RELATIONSHIP",
+            "effectiveTime": "20150131",
+            "id": "2689546029"
+        },
+        {
+            "active": true,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20080731,
+            "relationshipId": "3298216026",
+            "sourceId": "22298006",
+            "destinationId": "74281007",
+            "typeId": "363698007",
+            "type": {
+                "conceptId": "363698007",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Finding site (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Finding site",
+                    "lang": "en"
+                },
+                "id": "363698007"
+            },
+            "target": {
+                "conceptId": "74281007",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardium structure (body structure)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardium structure",
+                    "lang": "en"
+                },
+                "id": "74281007"
+            },
+            "groupId": 1,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "INFERRED_RELATIONSHIP",
+            "effectiveTime": "20080731",
+            "id": "3298216026"
+        },
+        {
+            "active": true,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20080731,
+            "relationshipId": "3298215027",
+            "sourceId": "22298006",
+            "destinationId": "55641003",
+            "typeId": "116676008",
+            "type": {
+                "conceptId": "116676008",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Associated morphology (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Associated morphology",
+                    "lang": "en"
+                },
+                "id": "116676008"
+            },
+            "target": {
+                "conceptId": "55641003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Infarct (morphologic abnormality)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Infarct",
+                    "lang": "en"
+                },
+                "id": "55641003"
+            },
+            "groupId": 1,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "INFERRED_RELATIONSHIP",
+            "effectiveTime": "20080731",
+            "id": "3298215027"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20190731,
+            "relationshipId": "10004772027",
+            "sourceId": "22298006",
+            "destinationId": "64572001",
+            "typeId": "116680003",
+            "type": {
+                "conceptId": "116680003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Is a (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Is a",
+                    "lang": "en"
+                },
+                "id": "116680003"
+            },
+            "target": {
+                "conceptId": "64572001",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Disease (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Disease",
+                    "lang": "en"
+                },
+                "id": "64572001"
+            },
+            "groupId": 0,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "STATED_RELATIONSHIP",
+            "effectiveTime": "20190731",
+            "id": "10004772027"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20130731,
+            "relationshipId": "2769995029",
+            "sourceId": "22298006",
+            "destinationId": "123397009",
+            "typeId": "116680003",
+            "type": {
+                "conceptId": "116680003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Is a (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Is a",
+                    "lang": "en"
+                },
+                "id": "116680003"
+            },
+            "target": {
+                "conceptId": "123397009",
+                "active": false,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Injury of anatomical site (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Injury of anatomical site",
+                    "lang": "en"
+                },
+                "id": "123397009"
+            },
+            "groupId": 0,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "INFERRED_RELATIONSHIP",
+            "effectiveTime": "20130731",
+            "id": "2769995029"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20220930,
+            "relationshipId": "184430024",
+            "sourceId": "22298006",
+            "destinationId": "57809008",
+            "typeId": "116680003",
+            "type": {
+                "conceptId": "116680003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Is a (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Is a",
+                    "lang": "en"
+                },
+                "id": "116680003"
+            },
+            "target": {
+                "conceptId": "57809008",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial disease (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial disease",
+                    "lang": "en"
+                },
+                "id": "57809008"
+            },
+            "groupId": 0,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "INFERRED_RELATIONSHIP",
+            "effectiveTime": "20220930",
+            "id": "184430024"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20190131,
+            "relationshipId": "4000992026",
+            "sourceId": "22298006",
+            "destinationId": "57809008",
+            "typeId": "116680003",
+            "type": {
+                "conceptId": "116680003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Is a (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Is a",
+                    "lang": "en"
+                },
+                "id": "116680003"
+            },
+            "target": {
+                "conceptId": "57809008",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardial disease (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardial disease",
+                    "lang": "en"
+                },
+                "id": "57809008"
+            },
+            "groupId": 0,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "STATED_RELATIONSHIP",
+            "effectiveTime": "20190131",
+            "id": "4000992026"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20220930,
+            "relationshipId": "4732951020",
+            "sourceId": "22298006",
+            "destinationId": "609410002",
+            "typeId": "116680003",
+            "type": {
+                "conceptId": "116680003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Is a (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Is a",
+                    "lang": "en"
+                },
+                "id": "116680003"
+            },
+            "target": {
+                "conceptId": "609410002",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Necrosis of anatomical site (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Necrosis of anatomical site",
+                    "lang": "en"
+                },
+                "id": "609410002"
+            },
+            "groupId": 0,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "INFERRED_RELATIONSHIP",
+            "effectiveTime": "20220930",
+            "id": "4732951020"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20030731,
+            "relationshipId": "1670883024",
+            "sourceId": "22298006",
+            "destinationId": "128599005",
+            "typeId": "116680003",
+            "type": {
+                "conceptId": "116680003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Is a (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Is a",
+                    "lang": "en"
+                },
+                "id": "116680003"
+            },
+            "target": {
+                "conceptId": "128599005",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Structural disorder of heart (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Structural disorder of heart",
+                    "lang": "en"
+                },
+                "id": "128599005"
+            },
+            "groupId": 0,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "INFERRED_RELATIONSHIP",
+            "effectiveTime": "20030731",
+            "id": "1670883024"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20120131,
+            "relationshipId": "2689547022",
+            "sourceId": "22298006",
+            "destinationId": "128599005",
+            "typeId": "116680003",
+            "type": {
+                "conceptId": "116680003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Is a (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Is a",
+                    "lang": "en"
+                },
+                "id": "116680003"
+            },
+            "target": {
+                "conceptId": "128599005",
+                "active": true,
+                "definitionStatus": "FULLY_DEFINED",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Structural disorder of heart (disorder)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Structural disorder of heart",
+                    "lang": "en"
+                },
+                "id": "128599005"
+            },
+            "groupId": 0,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "INFERRED_RELATIONSHIP",
+            "effectiveTime": "20120131",
+            "id": "2689547022"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20080731,
+            "relationshipId": "727841020",
+            "sourceId": "22298006",
+            "destinationId": "74281007",
+            "typeId": "363698007",
+            "type": {
+                "conceptId": "363698007",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Finding site (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Finding site",
+                    "lang": "en"
+                },
+                "id": "363698007"
+            },
+            "target": {
+                "conceptId": "74281007",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardium structure (body structure)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardium structure",
+                    "lang": "en"
+                },
+                "id": "74281007"
+            },
+            "groupId": 1,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "INFERRED_RELATIONSHIP",
+            "effectiveTime": "20080731",
+            "id": "727841020"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20190731,
+            "relationshipId": "4436489026",
+            "sourceId": "22298006",
+            "destinationId": "74281007",
+            "typeId": "363698007",
+            "type": {
+                "conceptId": "363698007",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Finding site (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Finding site",
+                    "lang": "en"
+                },
+                "id": "363698007"
+            },
+            "target": {
+                "conceptId": "74281007",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Myocardium structure (body structure)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Myocardium structure",
+                    "lang": "en"
+                },
+                "id": "74281007"
+            },
+            "groupId": 1,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "STATED_RELATIONSHIP",
+            "effectiveTime": "20190731",
+            "id": "4436489026"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20080731,
+            "relationshipId": "727840021",
+            "sourceId": "22298006",
+            "destinationId": "55641003",
+            "typeId": "116676008",
+            "type": {
+                "conceptId": "116676008",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Associated morphology (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Associated morphology",
+                    "lang": "en"
+                },
+                "id": "116676008"
+            },
+            "target": {
+                "conceptId": "55641003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Infarct (morphologic abnormality)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Infarct",
+                    "lang": "en"
+                },
+                "id": "55641003"
+            },
+            "groupId": 1,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "INFERRED_RELATIONSHIP",
+            "effectiveTime": "20080731",
+            "id": "727840021"
+        },
+        {
+            "active": false,
+            "moduleId": "900000000000207008",
+            "released": true,
+            "releasedEffectiveTime": 20190731,
+            "relationshipId": "4347493026",
+            "sourceId": "22298006",
+            "destinationId": "55641003",
+            "typeId": "116676008",
+            "type": {
+                "conceptId": "116676008",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000012004",
+                "fsn": {
+                    "term": "Associated morphology (attribute)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Associated morphology",
+                    "lang": "en"
+                },
+                "id": "116676008"
+            },
+            "target": {
+                "conceptId": "55641003",
+                "active": true,
+                "definitionStatus": "PRIMITIVE",
+                "moduleId": "900000000000207008",
+                "fsn": {
+                    "term": "Infarct (morphologic abnormality)",
+                    "lang": "en"
+                },
+                "pt": {
+                    "term": "Infarct",
+                    "lang": "en"
+                },
+                "id": "55641003"
+            },
+            "groupId": 1,
+            "modifier": "EXISTENTIAL",
+            "characteristicType": "STATED_RELATIONSHIP",
+            "effectiveTime": "20190731",
+            "id": "4347493026"
+        }
+    ],
+    "alternateIdentifiers": [],
+    "validationResults": []
+}

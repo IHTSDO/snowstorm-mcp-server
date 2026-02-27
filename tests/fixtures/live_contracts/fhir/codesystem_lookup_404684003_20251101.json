@@ -1,0 +1,3099 @@
+{
+    "resourceType": "Parameters",
+    "parameter": [
+        {
+            "name": "code",
+            "valueString": "404684003"
+        },
+        {
+            "name": "display",
+            "valueString": "Clinical finding"
+        },
+        {
+            "name": "name",
+            "valueString": "SNOMED CT release 2025-11-01"
+        },
+        {
+            "name": "system",
+            "valueString": "http://snomed.info/sct"
+        },
+        {
+            "name": "version",
+            "valueString": "http://snomed.info/sct/900000000000207008/version/20251101"
+        },
+        {
+            "name": "inactive",
+            "valueBoolean": false
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "effectiveTime"
+                },
+                {
+                    "name": "valueString",
+                    "valueString": "20040131"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "moduleId"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "900000000000207008"
+                }
+            ]
+        },
+        {
+            "extension": [
+                {
+                    "url": "http://snomed.info/fhir/StructureDefinition/designation-use-context",
+                    "extension": [
+                        {
+                            "url": "context",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000509007"
+                            }
+                        },
+                        {
+                            "url": "role",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000548007",
+                                "display": "PREFERRED"
+                            }
+                        },
+                        {
+                            "url": "type",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000003001",
+                                "display": "Fully specified name"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "url": "http://snomed.info/fhir/StructureDefinition/designation-use-context",
+                    "extension": [
+                        {
+                            "url": "context",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000508004"
+                            }
+                        },
+                        {
+                            "url": "role",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000548007",
+                                "display": "PREFERRED"
+                            }
+                        },
+                        {
+                            "url": "type",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000003001",
+                                "display": "Fully specified name"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "name": "designation",
+            "part": [
+                {
+                    "name": "language",
+                    "valueCode": "en"
+                },
+                {
+                    "name": "use",
+                    "valueCoding": {
+                        "system": "http://snomed.info/sct",
+                        "code": "900000000000003001",
+                        "display": "Fully specified name"
+                    }
+                },
+                {
+                    "name": "value",
+                    "valueString": "Clinical finding (finding)"
+                }
+            ]
+        },
+        {
+            "extension": [
+                {
+                    "url": "http://snomed.info/fhir/StructureDefinition/designation-use-context",
+                    "extension": [
+                        {
+                            "url": "context",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000509007"
+                            }
+                        },
+                        {
+                            "url": "role",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000548007",
+                                "display": "PREFERRED"
+                            }
+                        },
+                        {
+                            "url": "type",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000013009",
+                                "display": "Synonym"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "url": "http://snomed.info/fhir/StructureDefinition/designation-use-context",
+                    "extension": [
+                        {
+                            "url": "context",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000508004"
+                            }
+                        },
+                        {
+                            "url": "role",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000548007",
+                                "display": "PREFERRED"
+                            }
+                        },
+                        {
+                            "url": "type",
+                            "valueCoding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "900000000000013009",
+                                "display": "Synonym"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "name": "designation",
+            "part": [
+                {
+                    "name": "language",
+                    "valueCode": "en"
+                },
+                {
+                    "name": "use",
+                    "valueCoding": {
+                        "system": "http://snomed.info/sct",
+                        "code": "900000000000013009",
+                        "display": "Synonym"
+                    }
+                },
+                {
+                    "name": "value",
+                    "valueString": "Clinical finding"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "parent"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "138875005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "106132005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "127357005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1208523001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "406123005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "102475006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "373802001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "271616002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "64572001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "50080221000188107"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "473010000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "42045007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "129687000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "106077005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1156072000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "18165001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "250763003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "371350001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "427955007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "56302003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "816081007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "791000172108"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "107650008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "41944006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "406122000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "118236001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1335903005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "106028002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "365872002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "285384003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "298339004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "69328002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "118188004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "428735001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "429107004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "39104002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1157021003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "105721009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "299691001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "419026008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "445004006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "281037003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "248242009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "366258009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "438949009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "300893006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "371064006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "417893002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "118219009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "105501005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "249612005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "309298003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1281820001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "18523001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "366670002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "225552003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "59811005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "365670007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "105725000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "13197004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "79899007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "108329005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "298343000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "74217003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "118240005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "118223001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "106063007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "271787007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "444143004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "424017009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "371339004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "276477006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "106168000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "366130008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "442523003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "366147009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "135815002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "127325009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "415531008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "86820007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "716455001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "69449002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "250869005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "413347006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1290194006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "365873007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "123821009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "25950000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "879862001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "58015007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "105726004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "300577008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "298378000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1208524007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "309794002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "365858006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "267038008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "48851009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "135818000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1148601009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "106030000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "290122005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "405533003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "3219008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "84387000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "716457009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "364830008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "365871009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "37668006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "106112009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "365861007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "424122007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "118226009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "225858006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "118209003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "300864006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "301305006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "62602005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "301830001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "118228005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "313413008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1208525008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "444332001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "419099009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1208526009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "88472004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "89412004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "418799008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "251839006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "65124004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "298314008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "246556002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "298325004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1357793004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "135817005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "422704000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "301340007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1335898006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "281013003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "129861002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "106048009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "250244003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "21639008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "366332006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "897034005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "299735001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "116336009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "11999007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1335893002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "365605003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "300848003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "249857004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "420134006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "118227000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "440091008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "80631005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "105728003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "248402002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "131148009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "427504007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "444741009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "73443006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "106019003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "386617003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "444779004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "38320009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "716461003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1144534006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "366373007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "72670004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1335900008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "135820002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "410547008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "716458004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "135816001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "105729006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "419070004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "297268004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "424670002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "384740007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "414252009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "247441003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "102957003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "897035006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "384821006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "289267004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "252041008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1240581000000104"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "445150007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "301343009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "251859005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "430335007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "106089007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "314958004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "162408000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "301886001"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "248982007"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "302292003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1335899003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "424092004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1240591000000102"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "704657009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "249172003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "105720005"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "302293008"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "29679002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "281422006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "118235002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "55607006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "72077002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "106176003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "426786003"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "307824009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "432435004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "225577002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "105499002"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "32082000"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "429019009"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "105719004"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "43498006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "128973006"
+                }
+            ]
+        },
+        {
+            "name": "property",
+            "part": [
+                {
+                    "name": "code",
+                    "valueString": "child"
+                },
+                {
+                    "name": "value",
+                    "valueCode": "1144537004"
+                }
+            ]
+        }
+    ]
+}

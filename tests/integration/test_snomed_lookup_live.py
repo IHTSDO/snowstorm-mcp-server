@@ -16,9 +16,11 @@ CONFIG_PATH = Path(
         str(Path(__file__).resolve().parents[2] / "examples" / "config.local.yaml"),
     )
 )
+CLINICAL_FINDING = ("404684003", "Clinical finding")
+MYOCARDIAL_INFARCTION = ("22298006", "Myocardial infarction")
 TEST_CASES = [
-    ("404684003", "clinical finding"),
-    ("22298006", "myocardial infarction"),
+    (CLINICAL_FINDING, "clinical finding"),
+    (MYOCARDIAL_INFARCTION, "myocardial infarction"),
 ]
 
 
@@ -42,12 +44,13 @@ def _find_target_by_backend(backend_type: BackendType) -> tuple[str, object]:
 
 @pytest.mark.integration
 @pytest.mark.parametrize("target_name", ["snowstorm"])
-@pytest.mark.parametrize(("code", "expected_display_fragment"), TEST_CASES)
+@pytest.mark.parametrize(("concept_ref", "expected_display_fragment"), TEST_CASES)
 def test_lookup_snomed_concepts_on_live_target(
     target_name: str,
-    code: str,
+    concept_ref: tuple[str, str],
     expected_display_fragment: str,
 ) -> None:
+    code, concept_desc = concept_ref
     targets = _load_local_targets()
     if target_name not in targets:
         pytest.skip(f"Target {target_name} missing in {CONFIG_PATH}")
@@ -60,7 +63,7 @@ def test_lookup_snomed_concepts_on_live_target(
     with SnomedLookupService(target) as svc:
         result = svc.lookup(code=code)
 
-    assert result.code == code
+    assert result.code == code, concept_desc
     assert result.display is not None
     assert expected_display_fragment in result.display.lower()
     assert result.version is None or "20251101" in result.version or "sct/" in (result.system or "")
@@ -69,10 +72,11 @@ def test_lookup_snomed_concepts_on_live_target(
 @pytest.mark.integration
 def test_lookup_snomed_concepts_on_live_lite_target_if_available() -> None:
     target_name, target = _find_target_by_backend(BackendType.LITE)
+    clinical_finding_code, clinical_finding_desc = CLINICAL_FINDING
 
     with SnomedLookupService(target) as svc:
-        result = svc.lookup(code="404684003")
+        result = svc.lookup(code=clinical_finding_code)
 
-    assert result.code == "404684003"
+    assert result.code == clinical_finding_code, clinical_finding_desc
     assert result.display is not None
     assert "clinical finding" in result.display.lower()
