@@ -169,6 +169,9 @@ class ServerRuntime:
         count: int = 20,
         summary_only: bool = False,
         max_contains: int = 100,
+        semantic: bool | None = None,
+        semantic_model: str | None = None,
+        semantic_vector: str | list[float] | None = None,
         semantic_enabled: bool | None = None,
         semantic_mode: str | None = None,
         semantic_profile: str | None = None,
@@ -190,6 +193,9 @@ class ServerRuntime:
                 count=count,
                 summary_only=summary_only,
                 max_contains=applied_max_contains,
+                semantic=semantic,
+                semantic_model=semantic_model,
+                semantic_vector=semantic_vector,
                 semantic_enabled=semantic_enabled,
                 semantic_mode=semantic_mode,
                 semantic_profile=semantic_profile,
@@ -200,6 +206,32 @@ class ServerRuntime:
                 semantic_on_error=semantic_on_error,
                 semantic_provider=semantic_provider,
                 semantic_options=semantic_options,
+            )
+        return {"terminology": info.name, **result.model_dump()}
+
+    def snomed_semantic_match(
+        self,
+        *,
+        vector: str | list[float],
+        terminology: str | None = None,
+        target: str | None = None,
+        text: str | None = None,
+        ecl: str | None = None,
+        count: int = 20,
+        offset: int = 0,
+        model: str | None = None,
+        display_language: str | None = None,
+    ) -> dict[str, Any]:
+        info, target_cfg = self._resolve(terminology, target)
+        with SnomedLookupService(target_cfg) as svc:
+            result = svc.semantic_match(
+                vector=vector,
+                text=text,
+                ecl=ecl,
+                count=count,
+                offset=offset,
+                model=model,
+                display_language=display_language,
             )
         return {"terminology": info.name, **result.model_dump()}
 

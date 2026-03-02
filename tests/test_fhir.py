@@ -107,6 +107,27 @@ def test_expand_passes_semantic_rerank_query_parameters() -> None:
     assert query["x-snowstorm-semantic-options"] == "{\"source\":\"mcp\",\"topK\":50}"
 
 
+def test_expand_passes_embedding_index_semantic_parameters() -> None:
+    target = TargetConfig(base_url="http://test")
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["query"] = dict(request.url.params)
+        return httpx.Response(200, json={"resourceType": "ValueSet", "expansion": {"contains": []}})
+
+    with _make_service(target, handler) as svc:
+        svc.expand(
+            semantic=True,
+            semantic_model="binary-test-model",
+            semantic_vector=[1.0, 0.5, -0.25],
+        )
+
+    query = seen["query"]
+    assert query["_semantic"] == "true"
+    assert query["semanticModel"] == "binary-test-model"
+    assert query["semanticVector"] == "1.0,0.5,-0.25"
+
+
 def test_lookup_parses_real_parameters_payload_fixture() -> None:
     target = TargetConfig(base_url="http://test")
     payload = _load_json_fixture("live_contracts/fhir/codesystem_lookup_404684003_20251101.json")
@@ -298,6 +319,67 @@ def test_expand_rejects_invalid_semantic_candidate_pool() -> None:
     with _make_service(target, handler) as svc:
         with pytest.raises(ValueError, match="semantic_candidate_pool"):
             svc.expand(semantic_candidate_pool=0)
+
+
+def test_expand_rejects_semantic_vector_when_semantic_false() -> None:
+    target = TargetConfig(base_url="http://test")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"resourceType": "ValueSet", "expansion": {"contains": []}})
+
+    with _make_service(target, handler) as svc:
+        with pytest.raises(ValueError, match="semantic_vector"):
+            svc.expand(semantic=False, semantic_vector="1.0,0.0")
+
+
+def test_semantic_match_parses_parameters_payload() -> None:
+    target = TargetConfig(base_url="http://test")
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["query"] = dict(request.url.params)
+        return httpx.Response(
+            200,
+            json={
+                "resourceType": "Parameters",
+                "parameter": [
+                    {"name": "result", "valueBoolean": True},
+                    {"name": "model", "valueString": "default"},
+                    {"name": "offset", "valueInteger": 0},
+                    {"name": "count", "valueInteger": 2},
+                    {"name": "total", "valueInteger": 2},
+                    {
+                        "name": "match",
+                        "part": [
+                            {"name": "code", "valueCode": "22298006"},
+                            {"name": "display", "valueString": "Myocardial infarction"},
+                            {"name": "score", "valueDecimal": 0.98},
+                        ],
+                    },
+                    {
+                        "name": "match",
+                        "part": [
+                            {"name": "code", "valueCode": "57054005"},
+                            {"name": "display", "valueString": "Acute myocardial infarction"},
+                            {"name": "score", "valueDecimal": 0.90},
+                        ],
+                    },
+                ],
+            },
+        )
+
+    with _make_service(target, handler) as svc:
+        result = svc.semantic_match(vector="1.0,0.0", text="heart attack", count=2, offset=0)
+
+    query = seen["query"]
+    assert query["vector"] == "1.0,0.0"
+    assert query["text"] == "heart attack"
+    assert query["count"] == "2"
+    assert result.model == "default"
+    assert result.total == 2
+    assert result.returned == 2
+    assert result.matches[0].code == "22298006"
+    assert result.matches[0].score == 0.98
 
 
 def test_expand_parses_real_valueset_expand_payload_fixture() -> None:

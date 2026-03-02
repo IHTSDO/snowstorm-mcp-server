@@ -100,6 +100,7 @@ becomes the default automatically.
 | `snowstorm_list_versions` | Native Snowstorm code system versions (Snowstorm only) |
 | `snowstorm_search_concepts` | Native concept search (Snowstorm only) |
 | `snowstorm_get_concept_native` | Native concept detail (Snowstorm only) |
+| `snomed_semantic_match` | FHIR CodeSystem/$semantic-match (Lite embedding-index branch) |
 
 All tools accept an optional `terminology` parameter (e.g., `"snomedct-us"`).
 Most tools also accept optional `target` to constrain routing/disambiguate target selection.
@@ -225,6 +226,24 @@ This maps to Lite branch-specific FHIR query parameters:
 plus optional `x-snowstorm-semantic-profile`, `x-snowstorm-semantic-query`,
 `x-snowstorm-semantic-min-score`, `x-snowstorm-semantic-target`,
 `x-snowstorm-semantic-on-error`, and `x-snowstorm-semantic-options` (JSON object).
+
+For the `feature/embedding-index-semantic-search` Lite branch, `snomed_expand`
+also supports:
+- `semantic` (maps to `_semantic`)
+- `semantic_model` (maps to `semanticModel`)
+- `semantic_vector` (maps to `semanticVector`, comma-separated float vector)
+
+`snomed_semantic_match` (Lite embedding-index branch):
+
+```json
+{
+  "target": "lite",
+  "text": "heart attack",
+  "vector": "1.0,0.5,-0.25",
+  "count": 10,
+  "model": "default"
+}
+```
 
 ### FHIR operations and multi-edition Snowstorm
 

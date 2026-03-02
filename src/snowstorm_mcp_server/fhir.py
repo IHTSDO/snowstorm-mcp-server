@@ -68,6 +68,25 @@ class ExpandResult(BaseModel):
     raw_contains_count: int | None = None
 
 
+class SemanticMatchItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: str
+    display: str | None = None
+    score: float | None = None
+
+
+class SemanticMatchResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    model: str | None = None
+    offset: int = 0
+    count: int | None = None
+    total: int | None = None
+    returned: int = 0
+    matches: list[SemanticMatchItem] = Field(default_factory=list)
+
+
 def _parse_parameters_resource(data: dict[str, Any]) -> dict[str, list[Any]]:
     if data.get("resourceType") != "Parameters":
         raise HttpRequestError("FHIR operation did not return a Parameters resource")
@@ -200,6 +219,9 @@ class SnomedLookupService:
         count: int = 20,
         summary_only: bool = False,
         max_contains: int = 100,
+        semantic: bool | None = None,
+        semantic_model: str | None = None,
+        semantic_vector: str | list[float] | None = None,
         semantic_enabled: bool | None = None,
         semantic_mode: str | None = None,
         semantic_profile: str | None = None,
@@ -219,6 +241,8 @@ class SnomedLookupService:
             raise ValueError("max_contains must be >= 1")
         if semantic_candidate_pool is not None and semantic_candidate_pool < 1:
             raise ValueError("semantic_candidate_pool must be >= 1")
+        if semantic_vector is not None and semantic is False:
+            raise ValueError("semantic_vector requires semantic=true")
 
         resolved_url = (value_set_url or "").strip() or self.DEFAULT_IMPLICIT_SNOMED_VALUESET_URL
         params: dict[str, Any] = {
@@ -228,6 +252,12 @@ class SnomedLookupService:
         }
         if filter:
             params["filter"] = filter
+        if semantic is not None:
+            params["_semantic"] = str(semantic).lower()
+        if semantic_model:
+            params["semanticModel"] = semantic_model
+        if semantic_vector is not None:
+            params["semanticVector"] = _format_semantic_vector(semantic_vector)
         if semantic_enabled is not None:
             params["x-snowstorm-semantic-enabled"] = str(semantic_enabled).lower()
         if semantic_mode:
@@ -306,6 +336,70 @@ class SnomedLookupService:
             raw_contains_count=raw_contains_count,
         )
 
+    def semantic_match(
+        self,
+        *,
+        vector: str | list[float],
+        text: str | None = None,
+        ecl: str | None = None,
+        count: int = 20,
+        offset: int = 0,
+        model: str | None = None,
+        display_language: str | None = None,
+    ) -> SemanticMatchResult:
+        if count < 1:
+            raise ValueError("count must be >= 1")
+        if offset < 0:
+            raise ValueError("offset must be >= 0")
+
+        params: dict[str, Any] = {
+            "vector": _format_semantic_vector(vector),
+            "count": count,
+            "offset": offset,
+        }
+        if text:
+            params["text"] = text
+        if ecl:
+            params["ecl"] = ecl
+        if model:
+            params["model"] = model
+        if display_language:
+            params["displayLanguage"] = display_language
+
+        url = f"{self.target.fhir_base_url}/CodeSystem/$semantic-match"
+        data = self.client.request("GET", url, params=params, expect_json=True)
+        parsed = _parse_parameters_resource(data)
+        matches: list[SemanticMatchItem] = []
+        for raw in parsed.get("match", []):
+            if not isinstance(raw, list):
+                continue
+            code: str | None = None
+            display: str | None = None
+            score: float | None = None
+            for part in raw:
+                if not isinstance(part, dict):
+                    continue
+                part_name = part.get("name")
+                if part_name == "code":
+                    value = _first_part_str(part)
+                    if value:
+                        code = value
+                elif part_name == "display":
+                    display = _first_part_str(part)
+                elif part_name == "score":
+                    score = _first_part_float(part)
+            if code:
+                matches.append(SemanticMatchItem(code=code, display=display, score=score))
+
+        return SemanticMatchResult(
+            model=_first_str(parsed.get("model")),
+            offset=_first_int(parsed.get("offset")) or offset,
+            count=_first_int(parsed.get("count")) or count,
+            total=_first_int(parsed.get("total")),
+            returned=len(matches),
+            matches=matches,
+        )
+
     def _validate_code_via_lookup(
         self,
         *,
@@ -350,6 +444,40 @@ def _first_bool(values: list[Any] | None) -> bool | None:
         return None
     value = values[0]
     return value if isinstance(value, bool) else None
+
+
+def _first_int(values: list[Any] | None) -> int | None:
+    if not values:
+        return None
+    value = values[0]
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _first_part_str(part: dict[str, Any]) -> str | None:
+    for key in ("valueString", "valueCode", "valueUri", "valueId"):
+        value = part.get(key)
+        if isinstance(value, str):
+            return value
+    return None
+
+
+def _first_part_float(part: dict[str, Any]) -> float | None:
+    for key in ("valueDecimal", "valueNumber"):
+        value = part.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return float(value)
+    return None
+
+
+def _format_semantic_vector(vector: str | list[float]) -> str:
+    if isinstance(vector, str):
+        normalized = vector.strip()
+        if not normalized:
+            raise ValueError("vector must not be empty")
+        return normalized
+    if not vector:
+        raise ValueError("vector must not be empty")
+    return ",".join(str(float(v)) for v in vector)
 
 
 def _as_int(value: Any) -> int | None:

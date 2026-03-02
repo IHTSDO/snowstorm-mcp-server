@@ -160,8 +160,8 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "FHIR ValueSet/$expand for SNOMED (works on Snowstorm and Lite when FHIR is available). "
             "Defaults to the implicit SNOMED ValueSet URL and supports paging. "
             "Use summary_only=true to avoid returning large expansion item lists. "
-            "Optional semantic parameters (x-snowstorm-semantic-*) are supported for "
-            "Snowstorm Lite semantic reranking branches."
+            "Optional semantic parameters are supported for Snowstorm Lite semantic branches: "
+            "_semantic/semanticModel/semanticVector and x-snowstorm-semantic-*."
         ),
         structured_output=True,
     )
@@ -174,6 +174,9 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         count: int = 20,
         summary_only: bool = False,
         max_contains: int = 100,
+        semantic: bool | None = None,
+        semantic_model: str | None = None,
+        semantic_vector: str | list[float] | None = None,
         semantic_enabled: bool | None = None,
         semantic_mode: str | None = None,
         semantic_profile: str | None = None,
@@ -195,6 +198,9 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                 count=count,
                 summary_only=summary_only,
                 max_contains=max_contains,
+                semantic=semantic,
+                semantic_model=semantic_model,
+                semantic_vector=semantic_vector,
                 semantic_enabled=semantic_enabled,
                 semantic_mode=semantic_mode,
                 semantic_profile=semantic_profile,
@@ -205,6 +211,38 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                 semantic_on_error=semantic_on_error,
                 semantic_provider=semantic_provider,
                 semantic_options=semantic_options,
+            )
+        )
+
+    @mcp.tool(
+        description=(
+            "FHIR CodeSystem/$semantic-match (Snowstorm Lite embedding-index branch). "
+            "Requires a query vector and returns semantic matches with scores."
+        ),
+        structured_output=True,
+    )
+    def snomed_semantic_match(
+        vector: str | list[float],
+        terminology: str | None = None,
+        target: str | None = None,
+        text: str | None = None,
+        ecl: str | None = None,
+        count: int = 20,
+        offset: int = 0,
+        model: str | None = None,
+        display_language: str | None = None,
+    ) -> dict[str, Any]:
+        return _tool_guard(
+            lambda: runtime.snomed_semantic_match(
+                vector=vector,
+                terminology=terminology,
+                target=target,
+                text=text,
+                ecl=ecl,
+                count=count,
+                offset=offset,
+                model=model,
+                display_language=display_language,
             )
         )
 

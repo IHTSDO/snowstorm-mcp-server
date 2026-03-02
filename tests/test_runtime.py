@@ -98,6 +98,9 @@ def test_runtime_snomed_expand_delegates_and_adds_terminology(monkeypatch) -> No
             assert kwargs["count"] == 25
             assert kwargs["summary_only"] is True
             assert kwargs["max_contains"] == 3
+            assert kwargs["semantic"] is True
+            assert kwargs["semantic_model"] == "default"
+            assert kwargs["semantic_vector"] == "1.0,0.0"
             assert kwargs["semantic_enabled"] is True
             assert kwargs["semantic_mode"] == "rerank"
             assert kwargs["semantic_provider"] == "http"
@@ -122,6 +125,9 @@ def test_runtime_snomed_expand_delegates_and_adds_terminology(monkeypatch) -> No
         count=25,
         summary_only=True,
         max_contains=50,
+        semantic=True,
+        semantic_model="default",
+        semantic_vector="1.0,0.0",
         semantic_enabled=True,
         semantic_mode="rerank",
         semantic_provider="http",
@@ -247,3 +253,48 @@ def test_runtime_search_limit_is_capped_by_config(monkeypatch) -> None:
 
     assert payload["terminology"] == "snomedct"
     assert payload["limit"] == 2
+
+
+def test_runtime_semantic_match_delegates_and_adds_terminology(monkeypatch) -> None:
+    registry, target = _make_registry_and_target()
+
+    from snowstorm_mcp_server import runtime as runtime_module
+
+    monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
+
+    class _StubFhirService:
+        def __init__(self, _target) -> None:
+            self.target = _target
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def semantic_match(self, **kwargs):
+            assert kwargs["vector"] == "1.0,0.0"
+            assert kwargs["text"] == "heart attack"
+            assert kwargs["count"] == 5
+
+            class _Result:
+                def model_dump(self):
+                    return {
+                        "model": "default",
+                        "offset": 0,
+                        "count": 5,
+                        "total": 1,
+                        "returned": 1,
+                        "matches": [{"code": "22298006", "display": "Myocardial infarction"}],
+                    }
+
+            return _Result()
+
+    monkeypatch.setattr(runtime_module, "SnomedLookupService", _StubFhirService)
+    server = ServerRuntime(AppConfig(targets={"snowstorm": target}))
+
+    payload = server.snomed_semantic_match(vector="1.0,0.0", text="heart attack", count=5)
+
+    assert payload["terminology"] == "snomedct"
+    assert payload["returned"] == 1
+    assert payload["matches"][0]["code"] == "22298006"
