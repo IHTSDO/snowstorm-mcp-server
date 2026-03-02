@@ -100,3 +100,66 @@ def test_terminology_name_is_normalized(tmp_path) -> None:
 
     assert app.targets["lite"].terminology_name == "snomedct"
 
+
+def test_load_config_interpolates_env_placeholders(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SNOW_TOKEN", "secret-token")
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text(
+        textwrap.dedent(
+            """
+            targets:
+              snowstorm:
+                base_url: http://localhost:8080
+                auth:
+                  mode: bearer
+                  token: ${SNOW_TOKEN}
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    app = load_config(cfg)
+
+    assert app.targets["snowstorm"].auth.token is not None
+    assert app.targets["snowstorm"].auth.token.get_secret_value() == "secret-token"
+
+
+def test_load_config_applies_secret_env_overrides(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SNOWSTORM_MCP_TARGETS__SNOWSTORM__AUTH__TOKEN", "override-token")
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text(
+        textwrap.dedent(
+            """
+            targets:
+              snowstorm:
+                base_url: http://localhost:8080
+                auth:
+                  mode: bearer
+                  token: from-file
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    app = load_config(cfg)
+
+    assert app.targets["snowstorm"].auth.token is not None
+    assert app.targets["snowstorm"].auth.token.get_secret_value() == "override-token"
+
+
+def test_load_config_assigns_target_name_from_map_key(tmp_path) -> None:
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text(
+        textwrap.dedent(
+            """
+            targets:
+              primary:
+                base_url: http://localhost:8080
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    app = load_config(cfg)
+
+    assert app.targets["primary"].name == "primary"

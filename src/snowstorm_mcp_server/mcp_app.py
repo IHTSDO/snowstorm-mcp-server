@@ -22,6 +22,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Use the available tools to query SNOMED terminologies. "
             "Each terminology represents a SNOMED edition (e.g. 'snomedct', 'snomedct-us'). "
             "If you omit the 'terminology' parameter, the server's default terminology is used. "
+            "You may optionally pass a backend 'target' to constrain routing/disambiguate. "
             "Call list_terminologies first to discover available editions."
         ),
     )
@@ -39,80 +40,99 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     @mcp.tool(
         description=(
             "Return reachability and basic backend capability flags. "
-            "Optionally specify terminology; defaults to the server's default."
+            "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
         structured_output=True,
     )
-    def server_health(terminology: str | None = None) -> dict[str, Any]:
-        return _tool_guard(lambda: runtime.server_health(terminology))
+    def server_health(
+        terminology: str | None = None,
+        target: str | None = None,
+    ) -> dict[str, Any]:
+        return _tool_guard(lambda: runtime.server_health(terminology, target=target))
 
     @mcp.tool(
         description=(
             "Return backend classification and capabilities for a terminology. "
-            "Optionally specify terminology; defaults to the server's default."
+            "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
         structured_output=True,
     )
-    def server_capabilities(terminology: str | None = None) -> dict[str, Any]:
-        return _tool_guard(lambda: runtime.server_capabilities(terminology))
+    def server_capabilities(
+        terminology: str | None = None,
+        target: str | None = None,
+    ) -> dict[str, Any]:
+        return _tool_guard(lambda: runtime.server_capabilities(terminology, target=target))
 
     @mcp.tool(
         description=(
             "Return a parsed FHIR CapabilityStatement summary for a terminology's backend. "
             "Set include_raw=true (default) to also include the raw CapabilityStatement payload. "
-            "Optionally specify terminology; defaults to the server's default."
+            "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
         structured_output=True,
     )
     def fhir_metadata(
         terminology: str | None = None,
+        target: str | None = None,
         include_raw: bool = True,
     ) -> dict[str, Any]:
-        return _tool_guard(lambda: runtime.fhir_metadata(terminology, include_raw=include_raw))
+        return _tool_guard(
+            lambda: runtime.fhir_metadata(terminology, target=target, include_raw=include_raw)
+        )
 
     @mcp.tool(
         description=(
             "FHIR CodeSystem/$lookup for a SNOMED concept. "
-            "Optionally specify terminology (e.g. 'snomedct-us'); "
-            "defaults to the server's default terminology."
+            "Optionally specify terminology (e.g. 'snomedct-us') and/or target; "
+            "defaults to the server's default terminology when omitted."
         ),
         structured_output=True,
     )
     def snomed_lookup(
         code: str,
         terminology: str | None = None,
+        target: str | None = None,
         system: str = "http://snomed.info/sct",
         version: str | None = None,
     ) -> dict[str, Any]:
         return _tool_guard(
             lambda: runtime.snomed_lookup(
-                terminology=terminology, code=code, system=system, version=version
+                terminology=terminology,
+                target=target,
+                code=code,
+                system=system,
+                version=version,
             )
         )
 
     @mcp.tool(
         description=(
             "FHIR CodeSystem/$validate-code for a SNOMED concept. "
-            "Optionally specify terminology; defaults to the server's default."
+            "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
         structured_output=True,
     )
     def snomed_validate_code(
         code: str,
         terminology: str | None = None,
+        target: str | None = None,
         system: str = "http://snomed.info/sct",
         version: str | None = None,
     ) -> dict[str, Any]:
         return _tool_guard(
             lambda: runtime.snomed_validate_code(
-                terminology=terminology, code=code, system=system, version=version
+                terminology=terminology,
+                target=target,
+                code=code,
+                system=system,
+                version=version,
             )
         )
 
     @mcp.tool(
         description=(
             "FHIR CodeSystem/$subsumes for two SNOMED codes. "
-            "Optionally specify terminology; defaults to the server's default."
+            "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
         structured_output=True,
     )
@@ -120,12 +140,14 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         code_a: str,
         code_b: str,
         terminology: str | None = None,
+        target: str | None = None,
         system: str = "http://snomed.info/sct",
         version: str | None = None,
     ) -> dict[str, Any]:
         return _tool_guard(
             lambda: runtime.snomed_subsumes(
                 terminology=terminology,
+                target=target,
                 code_a=code_a,
                 code_b=code_b,
                 system=system,
@@ -143,6 +165,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     )
     def snomed_expand(
         terminology: str | None = None,
+        target: str | None = None,
         value_set_url: str | None = None,
         filter: str | None = None,
         offset: int = 0,
@@ -153,6 +176,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         return _tool_guard(
             lambda: runtime.snomed_expand(
                 terminology=terminology,
+                target=target,
                 value_set_url=value_set_url,
                 filter=filter,
                 offset=offset,
@@ -166,27 +190,34 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         description=(
             "List Snowstorm code systems with summarized latest version info "
             "(Snowstorm only; not supported on Lite). "
-            "Optionally specify terminology; defaults to the server's default."
+            "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
         structured_output=True,
     )
-    def snowstorm_list_codesystems(terminology: str | None = None) -> dict[str, Any]:
-        return _tool_guard(lambda: runtime.snowstorm_list_codesystems(terminology=terminology))
+    def snowstorm_list_codesystems(
+        terminology: str | None = None,
+        target: str | None = None,
+    ) -> dict[str, Any]:
+        return _tool_guard(
+            lambda: runtime.snowstorm_list_codesystems(terminology=terminology, target=target)
+        )
 
     @mcp.tool(
         description=(
             "List versions for a Snowstorm code system short name (Snowstorm only; not supported on Lite). "
-            "Optionally specify terminology for routing; defaults to the server's default."
+            "Optionally specify terminology and/or target for routing; defaults to the server's default terminology."
         ),
         structured_output=True,
     )
     def snowstorm_list_versions(
         code_system_short_name: str,
         terminology: str | None = None,
+        target: str | None = None,
     ) -> dict[str, Any]:
         return _tool_guard(
             lambda: runtime.snowstorm_list_versions(
                 terminology=terminology,
+                target=target,
                 code_system_short_name=code_system_short_name,
             )
         )
@@ -194,7 +225,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     @mcp.tool(
         description=(
             "Snowstorm-native concept search by term (Snowstorm only; not supported on Lite). "
-            "Optionally specify terminology; defaults to the server's default. "
+            "Optionally specify terminology and/or target; defaults to the server's default terminology. "
             "Backend may reject very short terms; use at least 3 searchable characters "
             "(letters/digits), e.g. prefer a longer phrase for acronyms."
         ),
@@ -203,12 +234,14 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     def snowstorm_search_concepts(
         term: str,
         terminology: str | None = None,
+        target: str | None = None,
         limit: int = 10,
         active_only: bool = True,
     ) -> dict[str, Any]:
         return _tool_guard(
             lambda: runtime.snowstorm_search_concepts(
                 terminology=terminology,
+                target=target,
                 term=term,
                 limit=limit,
                 active_only=active_only,
@@ -218,19 +251,21 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     @mcp.tool(
         description=(
             "Snowstorm-native concept detail by conceptId (Snowstorm only; not supported on Lite). "
-            "Optionally specify terminology; defaults to the server's default."
+            "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
         structured_output=True,
     )
     def snowstorm_get_concept_native(
         concept_id: str,
         terminology: str | None = None,
+        target: str | None = None,
         include_synonyms: bool = True,
         max_synonyms: int = 15,
     ) -> dict[str, Any]:
         return _tool_guard(
             lambda: runtime.snowstorm_get_concept_native(
                 terminology=terminology,
+                target=target,
                 concept_id=concept_id,
                 include_synonyms=include_synonyms,
                 max_synonyms=max_synonyms,
@@ -244,8 +279,15 @@ def _tool_guard(fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
     try:
         return fn()
     except TerminologyNotFoundError as exc:
-        raise ValueError(str(exc)) from exc
+        raise ValueError(f"[E_TARGET_SELECTION] {exc}") from exc
     except UnsupportedBackendError as exc:
-        raise ValueError(str(exc)) from exc
+        raise ValueError(f"[E_UNSUPPORTED_CAPABILITY] {exc}") from exc
     except HttpRequestError as exc:
-        raise ValueError(f"Backend request failed: {exc}") from exc
+        msg = str(exc)
+        if "timed out" in msg.lower():
+            raise ValueError(f"[E_BACKEND_TIMEOUT] {msg}") from exc
+        if exc.status_code in {401, 403}:
+            raise ValueError(f"[E_BACKEND_AUTH] {msg}") from exc
+        if exc.status_code is not None:
+            raise ValueError(f"[E_BACKEND_HTTP] {msg}") from exc
+        raise ValueError(f"[E_BACKEND_REQUEST] {msg}") from exc

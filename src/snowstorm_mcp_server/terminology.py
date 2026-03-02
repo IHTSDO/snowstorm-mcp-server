@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from pydantic import BaseModel, ConfigDict
 
 from .capabilities import BackendType, TargetStatus, probe_target
@@ -163,6 +161,51 @@ class TerminologyRegistry:
 
     def list_terminology_names(self) -> list[str]:
         return sorted(self._terminologies.keys())
+
+    def list_target_names(self) -> list[str]:
+        return sorted(self._targets.keys())
+
+    def resolve_for_target(
+        self,
+        *,
+        target_name: str,
+        terminology: str | None = None,
+    ) -> TerminologyInfo:
+        resolved_target = target_name.strip()
+        if resolved_target not in self._targets:
+            available_targets = ", ".join(self.list_target_names())
+            raise TerminologyNotFoundError(
+                f"Unknown target '{resolved_target}'. Available targets: {available_targets}"
+            )
+
+        if terminology:
+            info = self.resolve(terminology)
+            if info.target_name != resolved_target:
+                raise TerminologyNotFoundError(
+                    f"Terminology '{info.name}' is not served by target '{resolved_target}'. "
+                    f"It is served by target '{info.target_name}'."
+                )
+            return info
+
+        candidates = sorted(
+            (t for t in self._terminologies.values() if t.target_name == resolved_target),
+            key=lambda t: t.name,
+        )
+        if not candidates:
+            raise TerminologyNotFoundError(
+                f"Target '{resolved_target}' does not serve any discovered terminologies."
+            )
+        if self._default_terminology:
+            default_info = self._terminologies.get(self._default_terminology)
+            if default_info and default_info.target_name == resolved_target:
+                return default_info
+        if len(candidates) == 1:
+            return candidates[0]
+        options = ", ".join(c.name for c in candidates)
+        raise TerminologyNotFoundError(
+            f"Target '{resolved_target}' serves multiple terminologies: {options}. "
+            "Specify a terminology to disambiguate."
+        )
 
     def get_target_status(self, target_name: str) -> TargetStatus | None:
         return self._target_statuses.get(target_name)

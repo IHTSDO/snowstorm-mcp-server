@@ -1,5 +1,7 @@
 # snowstorm-mcp-server
 
+[![CI](https://github.com/IHTSDO/snowstorm-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/IHTSDO/snowstorm-mcp-server/actions/workflows/ci.yml)
+
 Python MCP server for SNOMED terminology on Snowstorm and Snowstorm Lite.
 
 ## Quick start (local dev)
@@ -8,6 +10,7 @@ Python MCP server for SNOMED terminology on Snowstorm and Snowstorm Lite.
 uv venv
 uv pip install -e .[dev]
 uv run pytest -q
+./scripts/check.sh
 ```
 
 For unit vs integration test workflows (including Docker stack setup and RF2 import), see `docs/testing.md`.
@@ -41,6 +44,10 @@ See `examples/config.local.yaml` (Snowstorm at `http://localhost:8080`).
 
 ```yaml
 default_terminology: snomedct
+response_limits:
+  max_expand_contains: 100
+  max_search_hits: 50
+  max_synonyms: 25
 
 targets:
   snowstorm:
@@ -56,7 +63,8 @@ targets:
     terminology_name: "snomedct-us"
     fhir_path: "/fhir"
     auth:
-      mode: "none"
+      mode: "bearer"
+      token: "${SNOWSTORM_LITE_TOKEN}"
 ```
 
 ## Terminology-based routing
@@ -94,7 +102,17 @@ becomes the default automatically.
 | `snowstorm_get_concept_native` | Native concept detail (Snowstorm only) |
 
 All tools accept an optional `terminology` parameter (e.g., `"snomedct-us"`).
+Most tools also accept optional `target` to constrain routing/disambiguate target selection.
 If omitted, the default terminology is used.
+
+### Env secret overrides
+
+Secrets can be injected at runtime using env vars instead of committing values:
+
+- Placeholder interpolation in config: `${ENV_VAR}` or `${ENV_VAR:-default}`
+- Target auth secret override variables:
+  - `SNOWSTORM_MCP_TARGETS__<TARGET_NAME_UPPER>__AUTH__PASSWORD`
+  - `SNOWSTORM_MCP_TARGETS__<TARGET_NAME_UPPER>__AUTH__TOKEN`
 
 ### Sample MCP tool calls
 
@@ -199,6 +217,7 @@ parameters rather than branch paths.
 
 Additional backend capability notes and v0.1 scope boundaries are documented in
 `docs/v0.1-capability-matrix.md`.
+Release tagging/smoke steps are in `docs/release-v0.1-checklist.md`.
 
 ## Snowstorm native search constraint (important)
 
