@@ -159,7 +159,9 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         description=(
             "FHIR ValueSet/$expand for SNOMED (works on Snowstorm and Lite when FHIR is available). "
             "Defaults to the implicit SNOMED ValueSet URL and supports paging. "
-            "Use summary_only=true to avoid returning large expansion item lists."
+            "Use summary_only=true to avoid returning large expansion item lists. "
+            "Optional semantic parameters (x-snowstorm-semantic-*) are supported for "
+            "Snowstorm Lite semantic reranking branches."
         ),
         structured_output=True,
     )
@@ -172,6 +174,16 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         count: int = 20,
         summary_only: bool = False,
         max_contains: int = 100,
+        semantic_enabled: bool | None = None,
+        semantic_mode: str | None = None,
+        semantic_profile: str | None = None,
+        semantic_query: str | None = None,
+        semantic_candidate_pool: int | None = None,
+        semantic_min_score: float | None = None,
+        semantic_target: str | None = None,
+        semantic_on_error: str | None = None,
+        semantic_provider: str | None = None,
+        semantic_options: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return _tool_guard(
             lambda: runtime.snomed_expand(
@@ -183,6 +195,16 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                 count=count,
                 summary_only=summary_only,
                 max_contains=max_contains,
+                semantic_enabled=semantic_enabled,
+                semantic_mode=semantic_mode,
+                semantic_profile=semantic_profile,
+                semantic_query=semantic_query,
+                semantic_candidate_pool=semantic_candidate_pool,
+                semantic_min_score=semantic_min_score,
+                semantic_target=semantic_target,
+                semantic_on_error=semantic_on_error,
+                semantic_provider=semantic_provider,
+                semantic_options=semantic_options,
             )
         )
 

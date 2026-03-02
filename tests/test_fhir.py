@@ -71,6 +71,42 @@ def test_expand_uses_implicit_snomed_valueset_and_parses_contains() -> None:
     assert result.contains[0].code == "22298006"
 
 
+def test_expand_passes_semantic_rerank_query_parameters() -> None:
+    target = TargetConfig(base_url="http://test")
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["query"] = dict(request.url.params)
+        return httpx.Response(200, json={"resourceType": "ValueSet", "expansion": {"contains": []}})
+
+    with _make_service(target, handler) as svc:
+        svc.expand(
+            filter="heart attack",
+            semantic_enabled=True,
+            semantic_mode="rerank",
+            semantic_profile="sapbert",
+            semantic_query="myocardial infarction",
+            semantic_candidate_pool=100,
+            semantic_min_score=0.42,
+            semantic_target="description",
+            semantic_on_error="fallback",
+            semantic_provider="http",
+            semantic_options={"source": "mcp", "topK": 50},
+        )
+
+    query = seen["query"]
+    assert query["x-snowstorm-semantic-enabled"] == "true"
+    assert query["x-snowstorm-semantic-mode"] == "rerank"
+    assert query["x-snowstorm-semantic-profile"] == "sapbert"
+    assert query["x-snowstorm-semantic-query"] == "myocardial infarction"
+    assert query["x-snowstorm-semantic-candidate-pool"] == "100"
+    assert query["x-snowstorm-semantic-min-score"] == "0.42"
+    assert query["x-snowstorm-semantic-target"] == "description"
+    assert query["x-snowstorm-semantic-on-error"] == "fallback"
+    assert query["x-snowstorm-semantic-provider"] == "http"
+    assert query["x-snowstorm-semantic-options"] == "{\"source\":\"mcp\",\"topK\":50}"
+
+
 def test_lookup_parses_real_parameters_payload_fixture() -> None:
     target = TargetConfig(base_url="http://test")
     payload = _load_json_fixture("live_contracts/fhir/codesystem_lookup_404684003_20251101.json")
@@ -251,6 +287,17 @@ def test_expand_requires_valueset_response() -> None:
     with _make_service(target, handler) as svc:
         with pytest.raises(HttpRequestError, match="ValueSet"):
             svc.expand()
+
+
+def test_expand_rejects_invalid_semantic_candidate_pool() -> None:
+    target = TargetConfig(base_url="http://test")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"resourceType": "ValueSet", "expansion": {"contains": []}})
+
+    with _make_service(target, handler) as svc:
+        with pytest.raises(ValueError, match="semantic_candidate_pool"):
+            svc.expand(semantic_candidate_pool=0)
 
 
 def test_expand_parses_real_valueset_expand_payload_fixture() -> None:

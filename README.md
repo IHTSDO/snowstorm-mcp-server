@@ -204,6 +204,28 @@ Expected response shape:
 }
 ```
 
+`snomed_expand` with Snowstorm Lite semantic reranking parameters:
+
+```json
+{
+  "target": "lite",
+  "value_set_url": "http://snomed.info/sct?fhir_vs=ecl/<<404684003",
+  "filter": "heart attack",
+  "count": 20,
+  "semantic_enabled": true,
+  "semantic_mode": "rerank",
+  "semantic_provider": "http",
+  "semantic_candidate_pool": 100
+}
+```
+
+This maps to Lite branch-specific FHIR query parameters:
+`x-snowstorm-semantic-enabled`, `x-snowstorm-semantic-mode`,
+`x-snowstorm-semantic-provider`, `x-snowstorm-semantic-candidate-pool`,
+plus optional `x-snowstorm-semantic-profile`, `x-snowstorm-semantic-query`,
+`x-snowstorm-semantic-min-score`, `x-snowstorm-semantic-target`,
+`x-snowstorm-semantic-on-error`, and `x-snowstorm-semantic-options` (JSON object).
+
 ### FHIR operations and multi-edition Snowstorm
 
 For native Snowstorm operations (search, concept detail), the terminology's

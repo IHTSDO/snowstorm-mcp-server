@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -199,6 +200,16 @@ class SnomedLookupService:
         count: int = 20,
         summary_only: bool = False,
         max_contains: int = 100,
+        semantic_enabled: bool | None = None,
+        semantic_mode: str | None = None,
+        semantic_profile: str | None = None,
+        semantic_query: str | None = None,
+        semantic_candidate_pool: int | None = None,
+        semantic_min_score: float | None = None,
+        semantic_target: str | None = None,
+        semantic_on_error: str | None = None,
+        semantic_provider: str | None = None,
+        semantic_options: dict[str, Any] | None = None,
     ) -> ExpandResult:
         if offset < 0:
             raise ValueError("offset must be >= 0")
@@ -206,6 +217,8 @@ class SnomedLookupService:
             raise ValueError("count must be >= 1")
         if max_contains < 1:
             raise ValueError("max_contains must be >= 1")
+        if semantic_candidate_pool is not None and semantic_candidate_pool < 1:
+            raise ValueError("semantic_candidate_pool must be >= 1")
 
         resolved_url = (value_set_url or "").strip() or self.DEFAULT_IMPLICIT_SNOMED_VALUESET_URL
         params: dict[str, Any] = {
@@ -215,6 +228,28 @@ class SnomedLookupService:
         }
         if filter:
             params["filter"] = filter
+        if semantic_enabled is not None:
+            params["x-snowstorm-semantic-enabled"] = str(semantic_enabled).lower()
+        if semantic_mode:
+            params["x-snowstorm-semantic-mode"] = semantic_mode
+        if semantic_profile:
+            params["x-snowstorm-semantic-profile"] = semantic_profile
+        if semantic_query:
+            params["x-snowstorm-semantic-query"] = semantic_query
+        if semantic_candidate_pool is not None:
+            params["x-snowstorm-semantic-candidate-pool"] = semantic_candidate_pool
+        if semantic_min_score is not None:
+            params["x-snowstorm-semantic-min-score"] = semantic_min_score
+        if semantic_target:
+            params["x-snowstorm-semantic-target"] = semantic_target
+        if semantic_on_error:
+            params["x-snowstorm-semantic-on-error"] = semantic_on_error
+        if semantic_provider:
+            params["x-snowstorm-semantic-provider"] = semantic_provider
+        if semantic_options:
+            params["x-snowstorm-semantic-options"] = json.dumps(
+                semantic_options, separators=(",", ":"), sort_keys=True
+            )
 
         url = f"{self.target.fhir_base_url}/ValueSet/$expand"
         data = self.client.request("GET", url, params=params, expect_json=True)

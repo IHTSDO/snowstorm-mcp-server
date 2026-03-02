@@ -98,6 +98,9 @@ def test_runtime_snomed_expand_delegates_and_adds_terminology(monkeypatch) -> No
             assert kwargs["count"] == 25
             assert kwargs["summary_only"] is True
             assert kwargs["max_contains"] == 3
+            assert kwargs["semantic_enabled"] is True
+            assert kwargs["semantic_mode"] == "rerank"
+            assert kwargs["semantic_provider"] == "http"
 
             class _Result:
                 def model_dump(self):
@@ -115,7 +118,14 @@ def test_runtime_snomed_expand_delegates_and_adds_terminology(monkeypatch) -> No
         AppConfig(targets={"snowstorm": target}, response_limits={"max_expand_contains": 3})
     )
 
-    payload = server.snomed_expand(count=25, summary_only=True, max_contains=50)
+    payload = server.snomed_expand(
+        count=25,
+        summary_only=True,
+        max_contains=50,
+        semantic_enabled=True,
+        semantic_mode="rerank",
+        semantic_provider="http",
+    )
 
     assert payload["terminology"] == "snomedct"
     assert payload["summary_only"] is True
