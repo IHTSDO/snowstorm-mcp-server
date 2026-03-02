@@ -26,6 +26,20 @@ dev = [
   "ruff>=0.6.9",
 ]
 
+[tool.hatch.build]
+ignore-vcs = true
+exclude = [
+  "/uv.lock",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/README.md",
+  "/LICENSE",
+  "/pyproject.toml",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/snowstorm_mcp_server"]
 
