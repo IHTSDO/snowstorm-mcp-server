@@ -210,6 +210,37 @@ def test_registry_list_terminologies_sorted() -> None:
     assert names == ["snomedct", "snomedct-us"]
 
 
+def test_registry_resolve_for_target_single_terminology() -> None:
+    reg = TerminologyRegistry()
+    target = TargetConfig(base_url="http://test")
+    reg.register(_make_info("snomedct", target_name="snowstorm"), target)
+
+    info = reg.resolve_for_target(target_name="snowstorm")
+
+    assert info.name == "snomedct"
+
+
+def test_registry_resolve_for_target_with_explicit_terminology() -> None:
+    reg = TerminologyRegistry()
+    target = TargetConfig(base_url="http://test")
+    reg.register(_make_info("snomedct", target_name="snowstorm"), target)
+    reg.register(_make_info("snomedct-us", target_name="snowstorm"), target)
+
+    info = reg.resolve_for_target(target_name="snowstorm", terminology="snomedct-us")
+
+    assert info.name == "snomedct-us"
+
+
+def test_registry_resolve_for_target_requires_terminology_when_ambiguous() -> None:
+    reg = TerminologyRegistry()
+    target = TargetConfig(base_url="http://test")
+    reg.register(_make_info("snomedct", target_name="snowstorm"), target)
+    reg.register(_make_info("snomedct-us", target_name="snowstorm"), target)
+
+    with pytest.raises(TerminologyNotFoundError, match="serves multiple terminologies"):
+        reg.resolve_for_target(target_name="snowstorm")
+
+
 # ---------------------------------------------------------------------------
 # build_registry integration tests (with mocked HTTP)
 # ---------------------------------------------------------------------------

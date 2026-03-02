@@ -97,6 +97,7 @@ def test_runtime_snomed_expand_delegates_and_adds_terminology(monkeypatch) -> No
         def expand(self, **kwargs):
             assert kwargs["count"] == 25
             assert kwargs["summary_only"] is True
+            assert kwargs["max_contains"] == 3
 
             class _Result:
                 def model_dump(self):
@@ -110,9 +111,11 @@ def test_runtime_snomed_expand_delegates_and_adds_terminology(monkeypatch) -> No
             return _Result()
 
     monkeypatch.setattr(runtime_module, "SnomedLookupService", _StubFhirService)
-    server = ServerRuntime(AppConfig(targets={"snowstorm": target}))
+    server = ServerRuntime(
+        AppConfig(targets={"snowstorm": target}, response_limits={"max_expand_contains": 3})
+    )
 
-    payload = server.snomed_expand(count=25, summary_only=True)
+    payload = server.snomed_expand(count=25, summary_only=True, max_contains=50)
 
     assert payload["terminology"] == "snomedct"
     assert payload["summary_only"] is True
@@ -193,3 +196,44 @@ def test_runtime_snowstorm_list_codesystems_rejects_lite_backend(monkeypatch) ->
 
     with pytest.raises(UnsupportedBackendError, match="does not support Snowstorm native code system listing"):
         server.snowstorm_list_codesystems()
+
+
+def test_runtime_search_limit_is_capped_by_config(monkeypatch) -> None:
+    registry, target = _make_registry_and_target()
+
+    from snowstorm_mcp_server import runtime as runtime_module
+
+    monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
+
+    class _StubNativeService:
+        def __init__(self, _target) -> None:
+            self.target = _target
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def search_concepts(self, **kwargs):
+            assert kwargs["limit"] == 2
+
+            class _Result:
+                def model_dump(self):
+                    return {
+                        "term": "myocardial infarction",
+                        "branch": "MAIN",
+                        "limit": 2,
+                        "returned": 0,
+                        "hits": [],
+                    }
+
+            return _Result()
+
+    monkeypatch.setattr(runtime_module, "SnowstormNativeService", _StubNativeService)
+    server = ServerRuntime(AppConfig(targets={"snowstorm": target}, response_limits={"max_search_hits": 2}))
+
+    payload = server.snowstorm_search_concepts(term="myocardial infarction", limit=20)
+
+    assert payload["terminology"] == "snomedct"
+    assert payload["limit"] == 2

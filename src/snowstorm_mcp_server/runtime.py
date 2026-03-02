@@ -18,10 +18,20 @@ class ServerRuntime:
         self.config = config
         self.registry: TerminologyRegistry = build_registry(config)
 
-    def _resolve(self, terminology: str | None) -> tuple[TerminologyInfo, TargetConfig]:
-        info = self.registry.resolve(terminology)
-        target = self.registry.get_target(info.target_name)
-        return info, target
+    def _resolve(
+        self,
+        terminology: str | None,
+        target_name: str | None = None,
+    ) -> tuple[TerminologyInfo, TargetConfig]:
+        if target_name:
+            info = self.registry.resolve_for_target(
+                target_name=target_name,
+                terminology=terminology,
+            )
+        else:
+            info = self.registry.resolve(terminology)
+        target_cfg = self.registry.get_target(info.target_name)
+        return info, target_cfg
 
     def list_terminologies(self) -> list[dict[str, Any]]:
         return [
@@ -34,9 +44,14 @@ class ServerRuntime:
             for t in self.registry.list_terminologies()
         ]
 
-    def server_health(self, terminology: str | None = None) -> dict[str, Any]:
-        info, target = self._resolve(terminology)
-        status = probe_target(target)
+    def server_health(
+        self,
+        terminology: str | None = None,
+        *,
+        target: str | None = None,
+    ) -> dict[str, Any]:
+        info, target_cfg = self._resolve(terminology, target)
+        status = probe_target(target_cfg)
         self.registry.set_target_status(info.target_name, status)
         return {
             "terminology": info.name,
@@ -53,11 +68,16 @@ class ServerRuntime:
             },
         }
 
-    def server_capabilities(self, terminology: str | None = None) -> dict[str, Any]:
-        info, target = self._resolve(terminology)
+    def server_capabilities(
+        self,
+        terminology: str | None = None,
+        *,
+        target: str | None = None,
+    ) -> dict[str, Any]:
+        info, target_cfg = self._resolve(terminology, target)
         status = self.registry.get_target_status(info.target_name)
         if status is None:
-            status = probe_target(target)
+            status = probe_target(target_cfg)
             self.registry.set_target_status(info.target_name, status)
         return {
             "terminology": info.name,
@@ -78,12 +98,13 @@ class ServerRuntime:
         self,
         terminology: str | None = None,
         *,
+        target: str | None = None,
         include_raw: bool = True,
     ) -> dict[str, Any]:
-        info, target = self._resolve(terminology)
+        info, target_cfg = self._resolve(terminology, target)
         status = self.registry.get_target_status(info.target_name)
         if status is None:
-            status = probe_target(target)
+            status = probe_target(target_cfg)
             self.registry.set_target_status(info.target_name, status)
         payload = {
             "terminology": info.name,
@@ -98,12 +119,13 @@ class ServerRuntime:
         self,
         *,
         terminology: str | None = None,
+        target: str | None = None,
         code: str,
         system: str = "http://snomed.info/sct",
         version: str | None = None,
     ) -> dict[str, Any]:
-        info, target = self._resolve(terminology)
-        with SnomedLookupService(target) as svc:
+        info, target_cfg = self._resolve(terminology, target)
+        with SnomedLookupService(target_cfg) as svc:
             result = svc.lookup(code=code, system=system, version=version)
         return {"terminology": info.name, **result.model_dump()}
 
@@ -111,12 +133,13 @@ class ServerRuntime:
         self,
         *,
         terminology: str | None = None,
+        target: str | None = None,
         code: str,
         system: str = "http://snomed.info/sct",
         version: str | None = None,
     ) -> dict[str, Any]:
-        info, target = self._resolve(terminology)
-        with SnomedLookupService(target) as svc:
+        info, target_cfg = self._resolve(terminology, target)
+        with SnomedLookupService(target_cfg) as svc:
             result = svc.validate_code(code=code, system=system, version=version)
         return {"terminology": info.name, **result.model_dump()}
 
@@ -124,13 +147,14 @@ class ServerRuntime:
         self,
         *,
         terminology: str | None = None,
+        target: str | None = None,
         code_a: str,
         code_b: str,
         system: str = "http://snomed.info/sct",
         version: str | None = None,
     ) -> dict[str, Any]:
-        info, target = self._resolve(terminology)
-        with SnomedLookupService(target) as svc:
+        info, target_cfg = self._resolve(terminology, target)
+        with SnomedLookupService(target_cfg) as svc:
             result = svc.subsumes(code_a=code_a, code_b=code_b, system=system, version=version)
         return {"terminology": info.name, **result.model_dump()}
 
@@ -138,6 +162,7 @@ class ServerRuntime:
         self,
         *,
         terminology: str | None = None,
+        target: str | None = None,
         value_set_url: str | None = None,
         filter: str | None = None,
         offset: int = 0,
@@ -145,15 +170,16 @@ class ServerRuntime:
         summary_only: bool = False,
         max_contains: int = 100,
     ) -> dict[str, Any]:
-        info, target = self._resolve(terminology)
-        with SnomedLookupService(target) as svc:
+        info, target_cfg = self._resolve(terminology, target)
+        applied_max_contains = min(max_contains, self.config.response_limits.max_expand_contains)
+        with SnomedLookupService(target_cfg) as svc:
             result = svc.expand(
                 value_set_url=value_set_url,
                 filter=filter,
                 offset=offset,
                 count=count,
                 summary_only=summary_only,
-                max_contains=max_contains,
+                max_contains=applied_max_contains,
             )
         return {"terminology": info.name, **result.model_dump()}
 
@@ -161,10 +187,11 @@ class ServerRuntime:
         self,
         *,
         terminology: str | None = None,
+        target: str | None = None,
     ) -> dict[str, Any]:
-        info, target = self._resolve(terminology)
+        info, target_cfg = self._resolve(terminology, target)
         self._ensure_native_supported(info.target_name, info.name, "Snowstorm native code system listing")
-        with SnowstormNativeService(target) as svc:
+        with SnowstormNativeService(target_cfg) as svc:
             result = svc.list_codesystems()
         return {"terminology": info.name, **result.model_dump()}
 
@@ -173,10 +200,11 @@ class ServerRuntime:
         *,
         code_system_short_name: str,
         terminology: str | None = None,
+        target: str | None = None,
     ) -> dict[str, Any]:
-        info, target = self._resolve(terminology)
+        info, target_cfg = self._resolve(terminology, target)
         self._ensure_native_supported(info.target_name, info.name, "Snowstorm native code system versions")
-        with SnowstormNativeService(target) as svc:
+        with SnowstormNativeService(target_cfg) as svc:
             result = svc.list_versions(code_system_short_name=code_system_short_name)
         return {"terminology": info.name, **result.model_dump()}
 
@@ -184,16 +212,18 @@ class ServerRuntime:
         self,
         *,
         terminology: str | None = None,
+        target: str | None = None,
         term: str,
         limit: int = 10,
         active_only: bool = True,
     ) -> dict[str, Any]:
-        info, target = self._resolve(terminology)
+        info, target_cfg = self._resolve(terminology, target)
         self._ensure_native_supported(info.target_name, info.name, "Snowstorm native concept search")
         branch = info.branch_path or "MAIN"
-        with SnowstormNativeService(target) as svc:
+        applied_limit = min(limit, self.config.response_limits.max_search_hits)
+        with SnowstormNativeService(target_cfg) as svc:
             result = svc.search_concepts(
-                term=term, branch=branch, limit=limit, active_only=active_only
+                term=term, branch=branch, limit=applied_limit, active_only=active_only
             )
         return {"terminology": info.name, **result.model_dump()}
 
@@ -201,19 +231,21 @@ class ServerRuntime:
         self,
         *,
         terminology: str | None = None,
+        target: str | None = None,
         concept_id: str,
         include_synonyms: bool = True,
         max_synonyms: int = 15,
     ) -> dict[str, Any]:
-        info, target = self._resolve(terminology)
+        info, target_cfg = self._resolve(terminology, target)
         self._ensure_native_supported(info.target_name, info.name, "Snowstorm native concept detail")
         branch = info.branch_path or "MAIN"
-        with SnowstormNativeService(target) as svc:
+        applied_max_synonyms = min(max_synonyms, self.config.response_limits.max_synonyms)
+        with SnowstormNativeService(target_cfg) as svc:
             result = svc.get_concept(
                 concept_id=concept_id,
                 branch=branch,
                 include_synonyms=include_synonyms,
-                max_synonyms=max_synonyms,
+                max_synonyms=applied_max_synonyms,
             )
         return {"terminology": info.name, **result.model_dump()}
 

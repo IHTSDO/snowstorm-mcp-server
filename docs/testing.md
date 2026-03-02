@@ -22,6 +22,12 @@ If you already use the repo-local virtual environment:
 ./.venv/bin/pytest -q tests -m "not integration"
 ```
 
+Run lint + typecheck + unit tests in one command:
+
+```bash
+./scripts/check.sh
+```
+
 ## Integration Tests (requires Snowstorm + Snowstorm Lite)
 
 Start the local Docker integration stack:

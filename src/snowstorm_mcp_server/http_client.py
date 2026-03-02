@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal, overload
+from urllib.parse import urlparse
 
 import httpx
 
@@ -59,6 +60,26 @@ class HttpClient:
     def __exit__(self, *_args: object) -> None:
         self.close()
 
+    @overload
+    def request(
+        self,
+        method: str,
+        url: str,
+        *,
+        expect_json: Literal[True],
+        **kwargs: Any,
+    ) -> dict[str, Any]: ...
+
+    @overload
+    def request(
+        self,
+        method: str,
+        url: str,
+        *,
+        expect_json: Literal[False] = False,
+        **kwargs: Any,
+    ) -> httpx.Response: ...
+
     def request(
         self,
         method: str,
@@ -68,36 +89,53 @@ class HttpClient:
         **kwargs: Any,
     ) -> httpx.Response | dict[str, Any]:
         kwargs = self._apply_request_defaults(kwargs)
+        path = _path_from_url(url)
+        target_label = self.target.name or self.target.base_url
         try:
             response = self._client.request(method, url, **kwargs)
         except httpx.TimeoutException as exc:
-            raise HttpRequestError(f"Request timed out: {method} {url}") from exc
+            raise HttpRequestError(
+                f"Request timed out for target '{target_label}': {method} {path}"
+            ) from exc
         except httpx.RequestError as exc:
-            raise HttpRequestError(f"Request failed: {method} {url}: {exc}") from exc
+            raise HttpRequestError(
+                f"Request failed for target '{target_label}': {method} {path}: {exc}"
+            ) from exc
 
         if response.status_code >= 400:
             raise HttpRequestError(
-                f"HTTP {response.status_code} for {method} {url}: {response.text[:200]}",
+                f"HTTP {response.status_code} for target '{target_label}': "
+                f"{method} {path}: {response.text[:200]}",
                 status_code=response.status_code,
             )
         if expect_json:
             try:
                 data = response.json()
             except ValueError as exc:
-                raise HttpRequestError(f"Invalid JSON response from {method} {url}") from exc
+                raise HttpRequestError(
+                    f"Invalid JSON response from target '{target_label}': {method} {path}"
+                ) from exc
             if not isinstance(data, dict):
-                raise HttpRequestError(f"Expected JSON object from {method} {url}")
+                raise HttpRequestError(
+                    f"Expected JSON object from target '{target_label}': {method} {path}"
+                )
             return data
         return response
 
     def request_allow_error(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
         kwargs = self._apply_request_defaults(kwargs)
+        path = _path_from_url(url)
+        target_label = self.target.name or self.target.base_url
         try:
             return self._client.request(method, url, **kwargs)
         except httpx.TimeoutException as exc:
-            raise HttpRequestError(f"Request timed out: {method} {url}") from exc
+            raise HttpRequestError(
+                f"Request timed out for target '{target_label}': {method} {path}"
+            ) from exc
         except httpx.RequestError as exc:
-            raise HttpRequestError(f"Request failed: {method} {url}: {exc}") from exc
+            raise HttpRequestError(
+                f"Request failed for target '{target_label}': {method} {path}: {exc}"
+            ) from exc
 
     def _apply_request_defaults(self, kwargs: dict[str, Any]) -> dict[str, Any]:
         merged = dict(kwargs)
@@ -109,3 +147,8 @@ class HttpClient:
                 headers.update(dict(merged["headers"]))
             merged["headers"] = headers
         return merged
+
+
+def _path_from_url(url: str) -> str:
+    parsed = urlparse(url)
+    return parsed.path or "/"
