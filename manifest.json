@@ -9,7 +9,7 @@
     "license": "Apache-2.0",
     "homepage": "https://github.com/IHTSDO/snowstorm-mcp-server",
     "repository": "https://github.com/IHTSDO/snowstorm-mcp-server",
-    "privacy_policy": "https://github.com/IHTSDO/snowstorm-mcp-server/blob/main/PRIVACY.md"
+    "privacy_policies": ["https://github.com/IHTSDO/snowstorm-mcp-server/blob/main/PRIVACY.md"]
   },
   "transport": {
     "type": "streamable-http"
