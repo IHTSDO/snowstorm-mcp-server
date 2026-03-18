@@ -8,7 +8,7 @@ Python MCP server for SNOMED terminology on Snowstorm and Snowstorm Lite.
 
 ```bash
 uv venv
-uv pip install -e .[dev]
+uv pip install -e ".[dev]"
 uv run pytest -q
 ./scripts/check.sh
 ```
@@ -34,6 +34,46 @@ Use the provided MCP config for local integration tests:
 
 ```bash
 SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-integration.yaml ./.venv/bin/pytest -q tests/integration
+```
+
+## Running the server
+
+The server reads its config from a YAML file (see `examples/config.local.yaml`).
+Point it at your Snowstorm instance via `--config` or the `SNOWSTORM_MCP_CONFIG` env var.
+
+**stdio** (for Claude Desktop and most MCP clients):
+
+```bash
+SNOWSTORM_MCP_CONFIG=examples/config.local.yaml uv run snowstorm-mcp-server --transport stdio
+```
+
+**SSE / Streamable HTTP** (for HTTP-based MCP clients):
+
+```bash
+SNOWSTORM_MCP_CONFIG=examples/config.local.yaml uv run snowstorm-mcp-server --transport sse
+# or
+SNOWSTORM_MCP_CONFIG=examples/config.local.yaml uv run snowstorm-mcp-server --transport streamable-http
+```
+
+**Claude Desktop config example** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "snowstorm": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--project", "/path/to/snowstorm-mcp-server",
+        "snowstorm-mcp-server",
+        "--transport", "stdio"
+      ],
+      "env": {
+        "SNOWSTORM_MCP_CONFIG": "/path/to/snowstorm-mcp-server/examples/config.local.yaml"
+      }
+    }
+  }
+}
 ```
 
 ## Local config example

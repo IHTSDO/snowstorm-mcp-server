@@ -23,7 +23,13 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Each terminology represents a SNOMED edition (e.g. 'snomedct', 'snomedct-us'). "
             "If you omit the 'terminology' parameter, the server's default terminology is used. "
             "You may optionally pass a backend 'target' to constrain routing/disambiguate. "
-            "Call list_terminologies first to discover available editions."
+            "Call list_terminologies first to discover available editions. "
+            "ECL (Expression Constraint Language) queries are supported via snomed_expand: "
+            "pass an ECL expression as value_set_url using the format "
+            "'http://snomed.info/sct?fhir_vs=ecl/<ECL>' "
+            "(e.g. 'http://snomed.info/sct?fhir_vs=ecl/<<404684003' for all clinical findings). "
+            "Always prefer snomed_expand with ECL over snowstorm_search_concepts for "
+            "hierarchy traversal, refset membership, or attribute-based queries."
         ),
     )
 
@@ -158,8 +164,15 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     @mcp.tool(
         description=(
             "FHIR ValueSet/$expand for SNOMED (works on Snowstorm and Lite when FHIR is available). "
-            "Defaults to the implicit SNOMED ValueSet URL and supports paging. "
-            "Use summary_only=true to avoid returning large expansion item lists."
+            "Supports ECL (Expression Constraint Language) queries via value_set_url: "
+            "pass 'http://snomed.info/sct?fhir_vs=ecl/<ECL>' to run any ECL expression. "
+            "ECL examples: "
+            "'http://snomed.info/sct?fhir_vs=ecl/<<404684003' (subtypes of Clinical finding), "
+            "'http://snomed.info/sct?fhir_vs=ecl/^447562003' (refset members), "
+            "'http://snomed.info/sct?fhir_vs=ecl/<<27624003:363698007=<<39057004' (attribute constraint). "
+            "Omit value_set_url to use the default implicit SNOMED ValueSet. "
+            "Use filter for text filtering within the expansion. "
+            "Use summary_only=true to get only the count without returning all items."
         ),
         structured_output=True,
     )

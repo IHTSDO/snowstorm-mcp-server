@@ -11,3 +11,4 @@ snomed_index/
 data/
 eval-results/
 uv.lock
+.vscode
