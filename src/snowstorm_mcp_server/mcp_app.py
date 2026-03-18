@@ -28,8 +28,10 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "pass an ECL expression as value_set_url using the format "
             "'http://snomed.info/sct?fhir_vs=ecl/<ECL>' "
             "(e.g. 'http://snomed.info/sct?fhir_vs=ecl/<<404684003' for all clinical findings). "
-            "Always prefer snomed_expand with ECL over snowstorm_search_concepts for "
-            "hierarchy traversal, refset membership, or attribute-based queries."
+            "For hierarchy navigation, use snomed_get_ancestors, snomed_get_children, "
+            "or snomed_get_descendants instead of writing ECL manually. "
+            "Use snomed_expand with ECL for advanced queries such as "
+            "refset membership or attribute-based constraints."
         ),
     )
 
@@ -196,6 +198,85 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                 count=count,
                 summary_only=summary_only,
                 max_contains=max_contains,
+            )
+        )
+
+    @mcp.tool(
+        description=(
+            "Get ancestor concepts of a SNOMED concept (parents, grandparents, etc. via IS-A hierarchy). "
+            "Set direct_only=true to return only immediate parents. "
+            "Optionally specify terminology and/or target; defaults to the server's default terminology."
+        ),
+        structured_output=True,
+    )
+    def snomed_get_ancestors(
+        concept_id: str,
+        terminology: str | None = None,
+        target: str | None = None,
+        direct_only: bool = False,
+        offset: int = 0,
+        count: int = 50,
+    ) -> dict[str, Any]:
+        ecl_operator = ">!" if direct_only else ">"
+        ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/{ecl_operator} {concept_id}"
+        return _tool_guard(
+            lambda: runtime.snomed_expand(
+                terminology=terminology,
+                target=target,
+                value_set_url=ecl_url,
+                offset=offset,
+                count=count,
+            )
+        )
+
+    @mcp.tool(
+        description=(
+            "Get direct children of a SNOMED concept (one level down in the IS-A hierarchy). "
+            "Optionally specify terminology and/or target; defaults to the server's default terminology."
+        ),
+        structured_output=True,
+    )
+    def snomed_get_children(
+        concept_id: str,
+        terminology: str | None = None,
+        target: str | None = None,
+        offset: int = 0,
+        count: int = 50,
+    ) -> dict[str, Any]:
+        ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/<! {concept_id}"
+        return _tool_guard(
+            lambda: runtime.snomed_expand(
+                terminology=terminology,
+                target=target,
+                value_set_url=ecl_url,
+                offset=offset,
+                count=count,
+            )
+        )
+
+    @mcp.tool(
+        description=(
+            "Get all descendant concepts of a SNOMED concept (children, grandchildren, etc. via IS-A hierarchy). "
+            "Use count and offset to paginate large result sets. "
+            "Optionally specify terminology and/or target; defaults to the server's default terminology."
+        ),
+        structured_output=True,
+    )
+    def snomed_get_descendants(
+        concept_id: str,
+        terminology: str | None = None,
+        target: str | None = None,
+        offset: int = 0,
+        count: int = 50,
+    ) -> dict[str, Any]:
+        ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/< {concept_id}"
+        return _tool_guard(
+            lambda: runtime.snomed_expand(
+                terminology=terminology,
+                target=target,
+                value_set_url=ecl_url,
+                offset=offset,
+                count=count,
             )
         )
 
