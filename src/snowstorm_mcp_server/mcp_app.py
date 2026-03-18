@@ -1,15 +1,30 @@
 from __future__ import annotations
 
+import json
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 
 from .config import load_config
 from .http_client import HttpRequestError
 from .runtime import ServerRuntime, UnsupportedBackendError
 from .terminology import TerminologyNotFoundError
+
+logger = logging.getLogger(__name__)
+
+MAX_RESPONSE_CHARS = 75_000
+
+
+_READ_ONLY_ANNOTATIONS = ToolAnnotations(
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
+)
 
 
 def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
@@ -37,6 +52,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
 
     @mcp.tool(
         description="List available SNOMED terminologies (editions) on this server.",
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def list_terminologies() -> dict[str, Any]:
@@ -50,6 +66,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Return reachability and basic backend capability flags. "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def server_health(
@@ -63,6 +80,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Return backend classification and capabilities for a terminology. "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def server_capabilities(
@@ -77,6 +95,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Set include_raw=true (default) to also include the raw CapabilityStatement payload. "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def fhir_metadata(
@@ -94,6 +113,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Optionally specify terminology (e.g. 'snomedct-us') and/or target; "
             "defaults to the server's default terminology when omitted."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def snomed_lookup(
@@ -118,6 +138,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "FHIR CodeSystem/$validate-code for a SNOMED concept. "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def snomed_validate_code(
@@ -142,6 +163,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "FHIR CodeSystem/$subsumes for two SNOMED codes. "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def snomed_subsumes(
@@ -176,6 +198,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Use filter for text filtering within the expansion. "
             "Use summary_only=true to get only the count without returning all items."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def snomed_expand(
@@ -207,6 +230,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Set direct_only=true to return only immediate parents. "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def snomed_get_ancestors(
@@ -234,6 +258,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Get direct children of a SNOMED concept (one level down in the IS-A hierarchy). "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def snomed_get_children(
@@ -260,6 +285,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Use count and offset to paginate large result sets. "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def snomed_get_descendants(
@@ -286,6 +312,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "(Snowstorm only; not supported on Lite). "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def snowstorm_list_codesystems(
@@ -301,6 +328,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "List versions for a Snowstorm code system short name (Snowstorm only; not supported on Lite). "
             "Optionally specify terminology and/or target for routing; defaults to the server's default terminology."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def snowstorm_list_versions(
@@ -323,6 +351,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Backend may reject very short terms; use at least 3 searchable characters "
             "(letters/digits), e.g. prefer a longer phrase for acronyms."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def snowstorm_search_concepts(
@@ -347,6 +376,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Snowstorm-native concept detail by conceptId (Snowstorm only; not supported on Lite). "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
         ),
+        annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
     def snowstorm_get_concept_native(
@@ -369,9 +399,52 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     return mcp
 
 
+def _truncate_response(result: dict[str, Any]) -> dict[str, Any]:
+    """Truncate tool response if it exceeds the character limit.
+
+    The Anthropic Connector Directory enforces a 25 000-token limit per tool
+    result.  Using a conservative 3 chars-per-token estimate gives a
+    75 000-character budget.  When the serialised JSON exceeds that budget
+    we trim list-valued fields from the end and append a truncation notice.
+    """
+    serialised = json.dumps(result, default=str)
+    if len(serialised) <= MAX_RESPONSE_CHARS:
+        return result
+
+    logger.warning(
+        "Tool response exceeds %d chars (%d); truncating",
+        MAX_RESPONSE_CHARS,
+        len(serialised),
+    )
+
+    # Trim the largest list field until we fit.
+    trimmed = dict(result)
+    notice = (
+        "Response was truncated to stay within size limits. "
+        "Use more specific parameters (e.g. filter, count, offset) to narrow results."
+    )
+    # Find the largest list field by serialised size.
+    list_fields = [
+        (k, v) for k, v in trimmed.items() if isinstance(v, list) and v
+    ]
+    if not list_fields:
+        return trimmed
+
+    largest_key = max(list_fields, key=lambda kv: len(json.dumps(kv[1], default=str)))[0]
+    items = list(trimmed[largest_key])  # copy to avoid mutating the original
+    trimmed[largest_key] = items
+    trimmed["_truncated"] = True
+    trimmed["_truncation_notice"] = notice
+    while items and len(json.dumps(trimmed, default=str)) > MAX_RESPONSE_CHARS:
+        items.pop()
+
+    return trimmed
+
+
 def _tool_guard(fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
     try:
-        return fn()
+        result = fn()
+        return _truncate_response(result)
     except TerminologyNotFoundError as exc:
         raise ValueError(f"[E_TARGET_SELECTION] {exc}") from exc
     except UnsupportedBackendError as exc:
