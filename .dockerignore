@@ -1,0 +1,15 @@
+.git
+.github
+.venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+__pycache__
+*.pyc
+tests/
+dev/
+docs/
+examples/config.local.yaml
+examples/config.docker-integration.yaml
+docker-compose.integration.yml
+uv.lock

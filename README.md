@@ -76,6 +76,27 @@ SNOWSTORM_MCP_CONFIG=examples/config.local.yaml uv run snowstorm-mcp-server --tr
 }
 ```
 
+## Hosted deployment (Docker)
+
+Build and run the container pointing at the public SNOMED International Snowstorm instance:
+
+```bash
+docker build -t snowstorm-mcp-server .
+docker run -p 8000:8000 snowstorm-mcp-server
+```
+
+The server starts in Streamable HTTP mode on port 8000 using the
+bundled `config.public-snowstorm.yaml`. Override the config at runtime:
+
+```bash
+docker run -p 8000:8000 \
+  -v /path/to/your/config.yaml:/app/config.yaml \
+  snowstorm-mcp-server
+```
+
+For production, deploy behind an HTTPS reverse proxy or on a platform
+with automatic TLS (Cloud Run, Fly.io, Railway, etc.).
+
 ## Local config example
 
 See `examples/config.local.yaml` (Snowstorm at `http://localhost:8080`).
