@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import pytest
 
 from snowstorm_mcp_server.mcp_app import create_mcp_app
