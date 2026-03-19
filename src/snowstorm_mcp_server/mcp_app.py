@@ -10,7 +10,6 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
-from .capabilities import BackendType
 from .config import load_config
 from .http_client import HttpRequestError
 from .runtime import ServerRuntime, UnsupportedBackendError
@@ -189,91 +188,47 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             )
         )
 
-    _has_lite_backend = any(
-        t.backend_type == BackendType.LITE for t in runtime.registry.list_terminologies()
+    @mcp.tool(
+        description=(
+            "FHIR ValueSet/$expand for SNOMED (works on Snowstorm and Lite when FHIR is available). "
+            "Supports ECL (Expression Constraint Language) queries via value_set_url: "
+            "pass 'http://snomed.info/sct?fhir_vs=ecl/<ECL>' to run any ECL expression. "
+            "ECL examples: "
+            "'http://snomed.info/sct?fhir_vs=ecl/<<404684003' (subtypes of Clinical finding), "
+            "'http://snomed.info/sct?fhir_vs=ecl/^447562003' (refset members), "
+            "'http://snomed.info/sct?fhir_vs=ecl/<<27624003:363698007=<<39057004' (attribute constraint). "
+            "Omit value_set_url to use the default implicit SNOMED ValueSet. "
+            "Use filter for text filtering within the expansion. "
+            "Set fuzzy=true to enable approximate/fuzzy matching on the filter text for misspelled or partial terms "
+            "(Snowstorm Lite only; silently ignored on full Snowstorm). "
+            "Use summary_only=true to get only the count without returning all items."
+        ),
+        annotations=_READ_ONLY_ANNOTATIONS,
+        structured_output=True,
     )
-
-    _EXPAND_DESCRIPTION_BASE = (
-        "FHIR ValueSet/$expand for SNOMED (works on Snowstorm and Lite when FHIR is available). "
-        "Supports ECL (Expression Constraint Language) queries via value_set_url: "
-        "pass 'http://snomed.info/sct?fhir_vs=ecl/<ECL>' to run any ECL expression. "
-        "ECL examples: "
-        "'http://snomed.info/sct?fhir_vs=ecl/<<404684003' (subtypes of Clinical finding), "
-        "'http://snomed.info/sct?fhir_vs=ecl/^447562003' (refset members), "
-        "'http://snomed.info/sct?fhir_vs=ecl/<<27624003:363698007=<<39057004' (attribute constraint). "
-        "Omit value_set_url to use the default implicit SNOMED ValueSet. "
-        "Use filter for text filtering within the expansion. "
-    )
-    _EXPAND_DESCRIPTION_FUZZY = (
-        "Set fuzzy=true to enable approximate/fuzzy matching on the filter text for misspelled or partial terms. "
-    )
-    _EXPAND_DESCRIPTION_TAIL = (
-        "Use summary_only=true to get only the count without returning all items."
-    )
-
-    if _has_lite_backend:
-        def snomed_expand(
-            terminology: str | None = None,
-            target: str | None = None,
-            value_set_url: str | None = None,
-            filter: str | None = None,
-            offset: int = 0,
-            count: int = 20,
-            summary_only: bool = False,
-            max_contains: int = 100,
-            fuzzy: bool = False,
-        ) -> dict[str, Any]:
-            return _tool_guard(
-                lambda: runtime.snomed_expand(
-                    terminology=terminology,
-                    target=target,
-                    value_set_url=value_set_url,
-                    filter=filter,
-                    offset=offset,
-                    count=count,
-                    summary_only=summary_only,
-                    max_contains=max_contains,
-                    fuzzy=fuzzy,
-                )
+    def snomed_expand(
+        terminology: str | None = None,
+        target: str | None = None,
+        value_set_url: str | None = None,
+        filter: str | None = None,
+        offset: int = 0,
+        count: int = 20,
+        summary_only: bool = False,
+        max_contains: int = 100,
+        fuzzy: bool = False,
+    ) -> dict[str, Any]:
+        return _tool_guard(
+            lambda: runtime.snomed_expand(
+                terminology=terminology,
+                target=target,
+                value_set_url=value_set_url,
+                filter=filter,
+                offset=offset,
+                count=count,
+                summary_only=summary_only,
+                max_contains=max_contains,
+                fuzzy=fuzzy,
             )
-
-        mcp.add_tool(
-            snomed_expand,
-            name="snomed_expand",
-            description=_EXPAND_DESCRIPTION_BASE + _EXPAND_DESCRIPTION_FUZZY + _EXPAND_DESCRIPTION_TAIL,
-            annotations=_READ_ONLY_ANNOTATIONS,
-            structured_output=True,
-        )
-    else:
-        def snomed_expand(
-            terminology: str | None = None,
-            target: str | None = None,
-            value_set_url: str | None = None,
-            filter: str | None = None,
-            offset: int = 0,
-            count: int = 20,
-            summary_only: bool = False,
-            max_contains: int = 100,
-        ) -> dict[str, Any]:
-            return _tool_guard(
-                lambda: runtime.snomed_expand(
-                    terminology=terminology,
-                    target=target,
-                    value_set_url=value_set_url,
-                    filter=filter,
-                    offset=offset,
-                    count=count,
-                    summary_only=summary_only,
-                    max_contains=max_contains,
-                )
-            )
-
-        mcp.add_tool(
-            snomed_expand,
-            name="snomed_expand",
-            description=_EXPAND_DESCRIPTION_BASE + _EXPAND_DESCRIPTION_TAIL,
-            annotations=_READ_ONLY_ANNOTATIONS,
-            structured_output=True,
         )
 
     @mcp.tool(
