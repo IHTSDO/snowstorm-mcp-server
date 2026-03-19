@@ -60,6 +60,19 @@ class TargetConfig(BaseModel):
         return f"{self.base_url}{self.fhir_path}"
 
 
+class GuardConfig(BaseModel):
+    """Performance guard tunables. All values have safe defaults."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rate_limit_calls: int = Field(default=10, ge=1)
+    rate_limit_window_seconds: int = Field(default=60, ge=1)
+    max_concurrent_requests: int = Field(default=3, ge=1)
+    max_count_per_call: int = Field(default=500, ge=1)
+    large_result_threshold: int = Field(default=1000, ge=1)
+    max_children_calls_per_minute: int = Field(default=5, ge=1)
+
+
 class AppConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -74,6 +87,7 @@ class AppConfig(BaseModel):
     targets: dict[str, TargetConfig]
     default_terminology: str | None = None
     response_limits: ResponseLimits = Field(default_factory=ResponseLimits)
+    guards: GuardConfig = Field(default_factory=GuardConfig)
 
     @model_validator(mode="after")
     def populate_target_names(self) -> AppConfig:

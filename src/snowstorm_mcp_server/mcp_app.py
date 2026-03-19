@@ -11,6 +11,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
 from .config import load_config
+from .guards import QueryGuards, SnowstormGuardError
 from .http_client import HttpRequestError
 from .runtime import ServerRuntime, UnsupportedBackendError
 from .terminology import TerminologyNotFoundError
@@ -32,6 +33,14 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     app_config = load_config(config_path)
     runtime = ServerRuntime(app_config)
     server_mode = app_config.server_mode
+    guards = QueryGuards(
+        rate_limit_calls=app_config.guards.rate_limit_calls,
+        rate_limit_window_seconds=app_config.guards.rate_limit_window_seconds,
+        max_concurrent_requests=app_config.guards.max_concurrent_requests,
+        max_count_per_call=app_config.guards.max_count_per_call,
+        large_result_threshold=app_config.guards.large_result_threshold,
+        max_children_calls_per_minute=app_config.guards.max_children_calls_per_minute,
+    )
 
     _ecl_guidance = (
         "\n\nTOOL SELECTION GUIDE:\n"
@@ -410,19 +419,22 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         max_contains: int = 100,
         fuzzy: bool = False,
     ) -> dict[str, Any]:
-        return _tool_guard(
-            lambda: runtime.snomed_expand(
-                terminology=terminology,
-                target=target,
-                value_set_url=value_set_url,
-                filter=filter,
-                offset=offset,
-                count=count,
-                summary_only=summary_only,
-                max_contains=max_contains,
-                fuzzy=fuzzy,
+        capped_count = guards.pre_expand(value_set_url, count)
+        with guards.concurrency:
+            result = _tool_guard(
+                lambda: runtime.snomed_expand(
+                    terminology=terminology,
+                    target=target,
+                    value_set_url=value_set_url,
+                    filter=filter,
+                    offset=offset,
+                    count=capped_count,
+                    summary_only=summary_only,
+                    max_contains=max_contains,
+                    fuzzy=fuzzy,
+                )
             )
-        )
+        return guards.post_expand(result, capped_count, summary_only)
 
     @mcp.tool(
         description=(
@@ -442,17 +454,19 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         offset: int = 0,
         count: int = 50,
     ) -> dict[str, Any]:
+        guards.pre_hierarchy(concept_id)
         ecl_operator = ">!" if direct_only else ">"
         ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/{ecl_operator} {concept_id}"
-        return _tool_guard(
-            lambda: runtime.snomed_expand(
-                terminology=terminology,
-                target=target,
-                value_set_url=ecl_url,
-                offset=offset,
-                count=count,
+        with guards.concurrency:
+            return _tool_guard(
+                lambda: runtime.snomed_expand(
+                    terminology=terminology,
+                    target=target,
+                    value_set_url=ecl_url,
+                    offset=offset,
+                    count=count,
+                )
             )
-        )
 
     @mcp.tool(
         description=(
@@ -476,16 +490,18 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         offset: int = 0,
         count: int = 50,
     ) -> dict[str, Any]:
+        guards.pre_hierarchy(concept_id)
         ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/<! {concept_id}"
-        return _tool_guard(
-            lambda: runtime.snomed_expand(
-                terminology=terminology,
-                target=target,
-                value_set_url=ecl_url,
-                offset=offset,
-                count=count,
+        with guards.concurrency:
+            return _tool_guard(
+                lambda: runtime.snomed_expand(
+                    terminology=terminology,
+                    target=target,
+                    value_set_url=ecl_url,
+                    offset=offset,
+                    count=count,
+                )
             )
-        )
 
     @mcp.tool(
         description=(
@@ -505,16 +521,18 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         offset: int = 0,
         count: int = 50,
     ) -> dict[str, Any]:
+        guards.pre_hierarchy(concept_id)
         ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/< {concept_id}"
-        return _tool_guard(
-            lambda: runtime.snomed_expand(
-                terminology=terminology,
-                target=target,
-                value_set_url=ecl_url,
-                offset=offset,
-                count=count,
+        with guards.concurrency:
+            return _tool_guard(
+                lambda: runtime.snomed_expand(
+                    terminology=terminology,
+                    target=target,
+                    value_set_url=ecl_url,
+                    offset=offset,
+                    count=count,
+                )
             )
-        )
 
     # --- Snowstorm-native tools (only registered when server_mode is "snowstorm") ---
     if server_mode == "snowstorm":
@@ -668,6 +686,8 @@ def _tool_guard(fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
     try:
         result = fn()
         return _truncate_response(result)
+    except SnowstormGuardError:
+        raise
     except TerminologyNotFoundError as exc:
         raise ValueError(f"[E_TARGET_SELECTION] {exc}") from exc
     except UnsupportedBackendError as exc:
