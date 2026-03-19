@@ -352,7 +352,8 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "Snowstorm-native concept search by term (Snowstorm only; not supported on Lite). "
             "Optionally specify terminology and/or target; defaults to the server's default terminology. "
             "Backend may reject very short terms; use at least 3 searchable characters "
-            "(letters/digits), e.g. prefer a longer phrase for acronyms."
+            "(letters/digits), e.g. prefer a longer phrase for acronyms. "
+            "Set fuzzy=true to enable approximate/fuzzy matching for misspelled or partial terms."
         ),
         annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
@@ -363,6 +364,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         target: str | None = None,
         limit: int = 10,
         active_only: bool = True,
+        fuzzy: bool = False,
     ) -> dict[str, Any]:
         return _tool_guard(
             lambda: runtime.snowstorm_search_concepts(
@@ -371,6 +373,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                 term=term,
                 limit=limit,
                 active_only=active_only,
+                fuzzy=fuzzy,
             )
         )
 

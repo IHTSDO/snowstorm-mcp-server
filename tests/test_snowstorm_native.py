@@ -45,6 +45,24 @@ def test_snowstorm_native_search_allows_three_char_term_before_backend_call() ->
         assert stub.called is True
 
 
+def test_snowstorm_native_search_fuzzy_appends_tilde_to_term() -> None:
+    target = TargetConfig(base_url="http://localhost:8080")
+    stub = _StubClient()
+    with SnowstormNativeService(target, client=stub) as svc:
+        svc.search_concepts(term="myocardal", limit=1, fuzzy=True)
+    ((_method, _url), kwargs) = stub.calls[0]
+    assert kwargs["params"]["term"] == "myocardal~"
+
+
+def test_snowstorm_native_search_no_fuzzy_does_not_append_tilde() -> None:
+    target = TargetConfig(base_url="http://localhost:8080")
+    stub = _StubClient()
+    with SnowstormNativeService(target, client=stub) as svc:
+        svc.search_concepts(term="myocardial", limit=1, fuzzy=False)
+    ((_method, _url), kwargs) = stub.calls[0]
+    assert kwargs["params"]["term"] == "myocardial"
+
+
 def test_snowstorm_native_list_codesystems_parses_latest_version_summary() -> None:
     target = TargetConfig(base_url="http://localhost:8080")
     stub = _StubClient()
