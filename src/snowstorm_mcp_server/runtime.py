@@ -218,7 +218,6 @@ class ServerRuntime:
         term: str,
         limit: int = 10,
         active_only: bool = True,
-        fuzzy: bool = False,
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
         self._ensure_native_supported(info.target_name, info.name, "Snowstorm native concept search")
@@ -226,7 +225,7 @@ class ServerRuntime:
         applied_limit = min(limit, self.config.response_limits.max_search_hits)
         with SnowstormNativeService(target_cfg) as svc:
             result = svc.search_concepts(
-                term=term, branch=branch, limit=applied_limit, active_only=active_only, fuzzy=fuzzy,
+                term=term, branch=branch, limit=applied_limit, active_only=active_only,
             )
         return {"terminology": info.name, **result.model_dump()}
 

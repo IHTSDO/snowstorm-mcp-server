@@ -109,7 +109,6 @@ class SnowstormNativeService:
         branch: str = "MAIN",
         limit: int = 10,
         active_only: bool = True,
-        fuzzy: bool = False,
     ) -> ConceptSearchResult:
         searchable_len = _searchable_term_length(term)
         if searchable_len < self.MIN_SEARCH_TERM_LENGTH:
@@ -122,9 +121,8 @@ class SnowstormNativeService:
         branch_path = branch.strip("/") or "MAIN"
         url = f"{self.target.base_url}/browser/{branch_path}/descriptions"
         raw_limit = max(1, min(limit * 4, 100))  # over-fetch then dedupe/filter
-        search_term = f"{term}~" if fuzzy else term
         params = {
-            "term": search_term,
+            "term": term,
             "active": "true" if active_only else "false",
             "limit": str(raw_limit),
         }
