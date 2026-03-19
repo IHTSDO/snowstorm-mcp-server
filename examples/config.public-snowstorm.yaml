@@ -7,6 +7,8 @@
 # Note: this is a shared public instance — be mindful of request volume.
 # Consider adding response caching at the deployment layer.
 
+server_mode: "snowstorm"
+
 # The public Snowstorm instance hosts multiple editions.
 # Set snomedct (International) as the default so callers can omit the
 # terminology parameter for common queries.

@@ -1,0 +1,18 @@
+# MCP config for a Dockerised Snowstorm (full) instance.
+#
+# Start the stack via docker-compose.integration.yml, then point here:
+#   SNOWSTORM_MCP_CONFIG=examples/config.docker-snowstorm.yaml \
+#   ./.venv/bin/pytest -q tests/integration
+
+server_mode: "snowstorm"
+
+default_terminology: snomedct
+
+targets:
+  snowstorm:
+    base_url: "http://localhost:8080"
+    mode: "snowstorm"
+    fhir_path: "/fhir"
+    timeout_seconds: 20
+    auth:
+      mode: "none"

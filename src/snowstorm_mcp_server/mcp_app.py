@@ -31,14 +31,13 @@ _READ_ONLY_ANNOTATIONS = ToolAnnotations(
 def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     app_config = load_config(config_path)
     runtime = ServerRuntime(app_config)
+    server_mode = app_config.server_mode
 
-    mcp = FastMCP(
-        "snowstorm-mcp-server",
-        host=os.environ.get("FASTMCP_HOST", "127.0.0.1"),
-        port=int(os.environ.get("FASTMCP_PORT", "8000")),
-        instructions=(
-            "Use the available tools to query SNOMED terminologies. "
-            "Each terminology represents a SNOMED edition (e.g. 'snomedct', 'snomedct-us'). "
+    if server_mode == "lite":
+        server_name = "snowstorm-lite-mcp-server"
+        instructions = (
+            "Use the available tools to query SNOMED terminologies via Snowstorm Lite (FHIR API). "
+            "Each terminology represents a SNOMED edition (e.g. 'snomedct', 'snomedct-nz'). "
             "If you omit the 'terminology' parameter, the server's default terminology is used. "
             "You may optionally pass a backend 'target' to constrain routing/disambiguate. "
             "Call list_terminologies first to discover available editions. "
@@ -50,7 +49,32 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "or snomed_get_descendants instead of writing ECL manually. "
             "Use snomed_expand with ECL for advanced queries such as "
             "refset membership or attribute-based constraints."
-        ),
+        )
+    else:
+        server_name = "snowstorm-mcp-server"
+        instructions = (
+            "Use the available tools to query SNOMED terminologies via Snowstorm. "
+            "Each terminology represents a SNOMED edition (e.g. 'snomedct', 'snomedct-us'). "
+            "If you omit the 'terminology' parameter, the server's default terminology is used. "
+            "You may optionally pass a backend 'target' to constrain routing/disambiguate. "
+            "Call list_terminologies first to discover available editions. "
+            "ECL (Expression Constraint Language) queries are supported via snomed_expand: "
+            "pass an ECL expression as value_set_url using the format "
+            "'http://snomed.info/sct?fhir_vs=ecl/<ECL>' "
+            "(e.g. 'http://snomed.info/sct?fhir_vs=ecl/<<404684003' for all clinical findings). "
+            "For hierarchy navigation, use snomed_get_ancestors, snomed_get_children, "
+            "or snomed_get_descendants instead of writing ECL manually. "
+            "Use snomed_expand with ECL for advanced queries such as "
+            "refset membership or attribute-based constraints. "
+            "Snowstorm-native tools (snowstorm_*) provide additional capabilities "
+            "such as full-text concept search and detailed concept retrieval with synonyms."
+        )
+
+    mcp = FastMCP(
+        server_name,
+        host=os.environ.get("FASTMCP_HOST", "127.0.0.1"),
+        port=int(os.environ.get("FASTMCP_PORT", "8000")),
+        instructions=instructions,
     )
 
     @mcp.tool(
@@ -313,95 +337,97 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             )
         )
 
-    @mcp.tool(
-        description=(
-            "List Snowstorm code systems with summarized latest version info "
-            "(Snowstorm only; not supported on Lite). "
-            "Optionally specify terminology and/or target; defaults to the server's default terminology."
-        ),
-        annotations=_READ_ONLY_ANNOTATIONS,
-        structured_output=True,
-    )
-    def snowstorm_list_codesystems(
-        terminology: str | None = None,
-        target: str | None = None,
-    ) -> dict[str, Any]:
-        return _tool_guard(
-            lambda: runtime.snowstorm_list_codesystems(terminology=terminology, target=target)
-        )
+    # --- Snowstorm-native tools (only registered when server_mode is "snowstorm") ---
+    if server_mode == "snowstorm":
 
-    @mcp.tool(
-        description=(
-            "List versions for a Snowstorm code system short name (Snowstorm only; not supported on Lite). "
-            "Optionally specify terminology and/or target for routing; defaults to the server's default terminology."
-        ),
-        annotations=_READ_ONLY_ANNOTATIONS,
-        structured_output=True,
-    )
-    def snowstorm_list_versions(
-        code_system_short_name: str,
-        terminology: str | None = None,
-        target: str | None = None,
-    ) -> dict[str, Any]:
-        return _tool_guard(
-            lambda: runtime.snowstorm_list_versions(
-                terminology=terminology,
-                target=target,
-                code_system_short_name=code_system_short_name,
-            )
+        @mcp.tool(
+            description=(
+                "List Snowstorm code systems with summarized latest version info. "
+                "Optionally specify terminology and/or target; defaults to the server's default terminology."
+            ),
+            annotations=_READ_ONLY_ANNOTATIONS,
+            structured_output=True,
         )
+        def snowstorm_list_codesystems(
+            terminology: str | None = None,
+            target: str | None = None,
+        ) -> dict[str, Any]:
+            return _tool_guard(
+                lambda: runtime.snowstorm_list_codesystems(terminology=terminology, target=target)
+            )
 
-    @mcp.tool(
-        description=(
-            "Snowstorm-native concept search by term (Snowstorm only; not supported on Lite). "
-            "Optionally specify terminology and/or target; defaults to the server's default terminology. "
-            "Backend may reject very short terms; use at least 3 searchable characters "
-            "(letters/digits), e.g. prefer a longer phrase for acronyms."
-        ),
-        annotations=_READ_ONLY_ANNOTATIONS,
-        structured_output=True,
-    )
-    def snowstorm_search_concepts(
-        term: str,
-        terminology: str | None = None,
-        target: str | None = None,
-        limit: int = 10,
-        active_only: bool = True,
-    ) -> dict[str, Any]:
-        return _tool_guard(
-            lambda: runtime.snowstorm_search_concepts(
-                terminology=terminology,
-                target=target,
-                term=term,
-                limit=limit,
-                active_only=active_only,
-            )
+        @mcp.tool(
+            description=(
+                "List versions for a Snowstorm code system short name. "
+                "Optionally specify terminology and/or target for routing; defaults to the server's default terminology."
+            ),
+            annotations=_READ_ONLY_ANNOTATIONS,
+            structured_output=True,
         )
+        def snowstorm_list_versions(
+            code_system_short_name: str,
+            terminology: str | None = None,
+            target: str | None = None,
+        ) -> dict[str, Any]:
+            return _tool_guard(
+                lambda: runtime.snowstorm_list_versions(
+                    terminology=terminology,
+                    target=target,
+                    code_system_short_name=code_system_short_name,
+                )
+            )
 
-    @mcp.tool(
-        description=(
-            "Snowstorm-native concept detail by conceptId (Snowstorm only; not supported on Lite). "
-            "Optionally specify terminology and/or target; defaults to the server's default terminology."
-        ),
-        annotations=_READ_ONLY_ANNOTATIONS,
-        structured_output=True,
-    )
-    def snowstorm_get_concept_native(
-        concept_id: str,
-        terminology: str | None = None,
-        target: str | None = None,
-        include_synonyms: bool = True,
-        max_synonyms: int = 15,
-    ) -> dict[str, Any]:
-        return _tool_guard(
-            lambda: runtime.snowstorm_get_concept_native(
-                terminology=terminology,
-                target=target,
-                concept_id=concept_id,
-                include_synonyms=include_synonyms,
-                max_synonyms=max_synonyms,
-            )
+        @mcp.tool(
+            description=(
+                "Snowstorm-native concept search by term. "
+                "Optionally specify terminology and/or target; defaults to the server's default terminology. "
+                "Backend may reject very short terms; use at least 3 searchable characters "
+                "(letters/digits), e.g. prefer a longer phrase for acronyms."
+            ),
+            annotations=_READ_ONLY_ANNOTATIONS,
+            structured_output=True,
         )
+        def snowstorm_search_concepts(
+            term: str,
+            terminology: str | None = None,
+            target: str | None = None,
+            limit: int = 10,
+            active_only: bool = True,
+        ) -> dict[str, Any]:
+            return _tool_guard(
+                lambda: runtime.snowstorm_search_concepts(
+                    terminology=terminology,
+                    target=target,
+                    term=term,
+                    limit=limit,
+                    active_only=active_only,
+                )
+            )
+
+        @mcp.tool(
+            description=(
+                "Snowstorm-native concept detail by conceptId. "
+                "Optionally specify terminology and/or target; defaults to the server's default terminology."
+            ),
+            annotations=_READ_ONLY_ANNOTATIONS,
+            structured_output=True,
+        )
+        def snowstorm_get_concept_native(
+            concept_id: str,
+            terminology: str | None = None,
+            target: str | None = None,
+            include_synonyms: bool = True,
+            max_synonyms: int = 15,
+        ) -> dict[str, Any]:
+            return _tool_guard(
+                lambda: runtime.snowstorm_get_concept_native(
+                    terminology=terminology,
+                    target=target,
+                    concept_id=concept_id,
+                    include_synonyms=include_synonyms,
+                    max_synonyms=max_synonyms,
+                )
+            )
 
     # --- Favicon for Anthropic Connector Directory listing ---------------
     _favicon_path = Path(__file__).resolve().parent / "static" / "favicon.svg"

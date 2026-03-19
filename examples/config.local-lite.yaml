@@ -1,0 +1,33 @@
+# Configuration for local Snowstorm Lite instances.
+#
+# server_mode "lite" exposes only FHIR-based tools — the Snowstorm-native
+# tools (snowstorm_list_codesystems, snowstorm_search_concepts, etc.) are
+# not registered, keeping the tool surface clean for LLM clients.
+#
+# Snowstorm Lite serves a single SNOMED CT edition per instance, so add
+# one target per edition you want to query.
+
+server_mode: "lite"
+
+default_terminology: snomedct
+
+targets:
+  # International edition
+  lite-int:
+    base_url: "http://localhost:8082"
+    mode: "lite"
+    terminology_name: "snomedct"
+    fhir_path: "/fhir"
+    timeout_seconds: 10
+    auth:
+      mode: "none"
+
+  # Uncomment to add a second edition (e.g. NZ) on another Lite instance:
+  # lite-nz:
+  #   base_url: "http://localhost:8083"
+  #   mode: "lite"
+  #   terminology_name: "snomedct-nz"
+  #   fhir_path: "/fhir"
+  #   timeout_seconds: 10
+  #   auth:
+  #     mode: "none"

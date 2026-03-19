@@ -42,10 +42,11 @@ dev/integration/import_snomed.sh \
   --rf2-zip ../SnomedCT_InternationalRF2_PRODUCTION_20251101T120000Z.zip
 ```
 
-Use the provided MCP config for local integration tests:
+Run integration tests against each backend:
 
 ```bash
-SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-integration.yaml ./.venv/bin/pytest -q tests/integration
+SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-snowstorm.yaml ./.venv/bin/pytest -q tests/integration
+SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-lite.yaml ./.venv/bin/pytest -q tests/integration
 ```
 
 ## Running the server

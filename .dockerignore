@@ -10,6 +10,7 @@ tests/
 dev/
 docs/
 examples/config.local.yaml
-examples/config.docker-integration.yaml
+examples/config.docker-snowstorm.yaml
+examples/config.docker-lite.yaml
 docker-compose.integration.yml
 uv.lock

@@ -257,6 +257,40 @@ def _mock_snowstorm_handler(request: httpx.Request) -> httpx.Response:
     return httpx.Response(404)
 
 
+def test_registry_routes_multiple_lite_targets() -> None:
+    """Two Lite instances (different editions) resolve to their respective targets."""
+    reg = TerminologyRegistry()
+    target_int = TargetConfig(base_url="http://lite-int:8082", mode="lite", terminology_name="snomedct")
+    target_nz = TargetConfig(base_url="http://lite-nz:8083", mode="lite", terminology_name="snomedct-nz")
+
+    reg.register(
+        _make_info("snomedct", target_name="lite-int", backend_type=BackendType.LITE, branch_path=None),
+        target_int,
+    )
+    reg.register(
+        _make_info("snomedct-nz", target_name="lite-nz", backend_type=BackendType.LITE, branch_path=None),
+        target_nz,
+    )
+    reg.set_default("snomedct")
+
+    # Default resolves to the international Lite instance
+    default_info = reg.resolve(None)
+    assert default_info.name == "snomedct"
+    assert default_info.target_name == "lite-int"
+    assert reg.get_target("lite-int").base_url == "http://lite-int:8082"
+
+    # Explicit NZ resolves to the NZ Lite instance
+    nz_info = reg.resolve("snomedct-nz")
+    assert nz_info.name == "snomedct-nz"
+    assert nz_info.target_name == "lite-nz"
+    assert reg.get_target("lite-nz").base_url == "http://lite-nz:8083"
+
+    # Both show up in listing
+    names = reg.list_terminology_names()
+    assert "snomedct" in names
+    assert "snomedct-nz" in names
+
+
 def test_build_registry_discovers_snowstorm_terminologies(monkeypatch) -> None:
     config = AppConfig(
         default_terminology="snomedct",
