@@ -82,6 +82,102 @@ def _call_tool(mcp_app, name: str, arguments: dict):
     raise KeyError(f"Tool {name!r} not registered")
 
 
+NATIVE_ONLY_TOOLS = {
+    "snowstorm_list_codesystems",
+    "snowstorm_list_versions",
+    "snowstorm_search_concepts",
+    "snowstorm_get_concept_native",
+}
+
+FHIR_TOOLS = {
+    "list_terminologies",
+    "server_health",
+    "server_capabilities",
+    "fhir_metadata",
+    "snomed_lookup",
+    "snomed_validate_code",
+    "snomed_subsumes",
+    "snomed_expand",
+    "snomed_get_ancestors",
+    "snomed_get_children",
+    "snomed_get_descendants",
+}
+
+
+def _create_mcp_for_mode(monkeypatch, server_mode):
+    from snowstorm_mcp_server.capabilities import BackendType, Capabilities, TargetStatus
+    from snowstorm_mcp_server.config import AppConfig, TargetConfig
+    from snowstorm_mcp_server.terminology import TerminologyInfo, TerminologyRegistry
+
+    backend_type = BackendType.LITE if server_mode == "lite" else BackendType.SNOWSTORM
+    target = TargetConfig(
+        base_url="http://stub.test",
+        mode=server_mode,
+        terminology_name="snomedct" if server_mode == "lite" else None,
+    )
+    stub_config = AppConfig(server_mode=server_mode, targets={"stub": target})
+
+    def _fake_build_registry(_cfg):
+        registry = TerminologyRegistry()
+        registry.register(
+            TerminologyInfo(
+                name="snomedct",
+                target_name="stub",
+                backend_type=backend_type,
+                branch_path="MAIN" if server_mode == "snowstorm" else None,
+            ),
+            target,
+        )
+        registry.set_default("snomedct")
+        registry.set_target_status(
+            "stub",
+            TargetStatus(
+                reachable=True,
+                base_url="http://stub.test",
+                fhir_base_url="http://stub.test/fhir",
+                capabilities=Capabilities(
+                    backend_type=backend_type,
+                    has_fhir=True,
+                    has_native_api=(server_mode == "snowstorm"),
+                ),
+            ),
+        )
+        return registry
+
+    from snowstorm_mcp_server import mcp_app as mcp_app_module
+    from snowstorm_mcp_server import runtime as runtime_module
+
+    monkeypatch.setattr(mcp_app_module, "load_config", lambda _path=None: stub_config)
+    monkeypatch.setattr(runtime_module, "build_registry", _fake_build_registry)
+    return create_mcp_app()
+
+
+def _tool_names(mcp_app):
+    return {t.name for t in mcp_app._tool_manager._tools.values()}
+
+
+class TestServerModeToolRegistration:
+    def test_snowstorm_mode_registers_all_tools(self, monkeypatch):
+        app = _create_mcp_for_mode(monkeypatch, "snowstorm")
+        tools = _tool_names(app)
+        assert FHIR_TOOLS <= tools
+        assert NATIVE_ONLY_TOOLS <= tools
+
+    def test_lite_mode_excludes_native_tools(self, monkeypatch):
+        app = _create_mcp_for_mode(monkeypatch, "lite")
+        tools = _tool_names(app)
+        assert FHIR_TOOLS <= tools
+        assert tools & NATIVE_ONLY_TOOLS == set()
+
+    def test_snowstorm_mode_server_name(self, monkeypatch):
+        app = _create_mcp_for_mode(monkeypatch, "snowstorm")
+        assert app.name == "snowstorm-mcp-server"
+
+    def test_lite_mode_server_name(self, monkeypatch):
+        app = _create_mcp_for_mode(monkeypatch, "lite")
+        assert app.name == "snowstorm-lite-mcp-server"
+
+
 class TestToolAnnotations:
     def test_all_tools_have_read_only_annotations(self, mcp):
         """Every registered tool must carry readOnlyHint=True, destructiveHint=False."""

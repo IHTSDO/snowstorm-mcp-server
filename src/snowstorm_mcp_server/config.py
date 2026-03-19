@@ -70,6 +70,7 @@ class AppConfig(BaseModel):
         max_search_hits: int = Field(default=50, ge=1)
         max_synonyms: int = Field(default=25, ge=1)
 
+    server_mode: Literal["snowstorm", "lite"] = "snowstorm"
     targets: dict[str, TargetConfig]
     default_terminology: str | None = None
     response_limits: ResponseLimits = Field(default_factory=ResponseLimits)
@@ -81,6 +82,7 @@ class AppConfig(BaseModel):
         if self.default_terminology is not None:
             self.default_terminology = self.default_terminology.strip().lower()
         return self
+
 
 
 def _load_raw_data(path: Path) -> dict[str, Any]:

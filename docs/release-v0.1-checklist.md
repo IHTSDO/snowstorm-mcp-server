@@ -11,7 +11,8 @@
 - Run local checks:
   - `./scripts/check.sh`
 - Run integration checks (when release infra is available):
-  - `SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-integration.yaml ./.venv/bin/pytest -q tests/integration`
+  - `SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-snowstorm.yaml ./.venv/bin/pytest -q tests/integration`
+  - `SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-lite.yaml ./.venv/bin/pytest -q tests/integration`
 
 ## 3. Smoke test steps
 

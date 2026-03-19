@@ -1,3 +1,8 @@
+# Server mode restricts which tools are exposed:
+#   "snowstorm" — all tools (FHIR + Snowstorm-native)
+#   "lite"      — FHIR-only tools (no Snowstorm-native tools)
+server_mode: "snowstorm"
+
 # Default terminology used when 'terminology' parameter is omitted.
 # For Snowstorm targets, terminologies are auto-discovered from /codesystems
 # (lowercased shortName, e.g. "snomedct", "snomedct-us").
@@ -12,13 +17,3 @@ targets:
     timeout_seconds: 10
     auth:
       mode: "none"
-
-  # Snowstorm Lite -- single terminology per instance.
-  # Uncomment and adjust to add a Lite backend:
-  # lite-nz:
-  #   base_url: "http://localhost:8082"
-  #   mode: "lite"
-  #   terminology_name: "snomedct-nz"
-  #   fhir_path: "/fhir"
-  #   auth:
-  #     mode: "none"

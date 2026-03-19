@@ -1,0 +1,19 @@
+# MCP config for a Dockerised Snowstorm Lite instance.
+#
+# Start the stack via docker-compose.integration.yml, then point here:
+#   SNOWSTORM_MCP_CONFIG=examples/config.docker-lite.yaml \
+#   ./.venv/bin/pytest -q tests/integration
+
+server_mode: "lite"
+
+default_terminology: snomedct-lite
+
+targets:
+  lite:
+    base_url: "http://localhost:8082"
+    mode: "lite"
+    terminology_name: "snomedct-lite"
+    fhir_path: "/fhir"
+    timeout_seconds: 20
+    auth:
+      mode: "none"

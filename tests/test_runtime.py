@@ -192,7 +192,7 @@ def test_runtime_snowstorm_list_codesystems_rejects_lite_backend(monkeypatch) ->
     from snowstorm_mcp_server import runtime as runtime_module
 
     monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
-    server = ServerRuntime(AppConfig(targets={"lite": target}))
+    server = ServerRuntime(AppConfig(server_mode="lite", targets={"lite": target}))
 
     with pytest.raises(UnsupportedBackendError, match="does not support Snowstorm native code system listing"):
         server.snowstorm_list_codesystems()

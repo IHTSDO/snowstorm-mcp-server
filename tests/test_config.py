@@ -12,14 +12,19 @@ def test_load_yaml_config_supports_multiple_targets(tmp_path) -> None:
     cfg.write_text(
         textwrap.dedent(
             """
+            server_mode: lite
             targets:
-              snowstorm:
-                base_url: http://localhost:8080/
+              lite-int:
+                base_url: http://localhost:8081/
+                mode: lite
+                terminology_name: snomedct
+                fhir_path: fhir
                 auth:
                   mode: none
-              lite:
-                base_url: http://localhost:8081
+              lite-nz:
+                base_url: http://localhost:8082
                 mode: lite
+                terminology_name: snomedct-nz
                 fhir_path: fhir
                 auth:
                   mode: none
@@ -31,9 +36,9 @@ def test_load_yaml_config_supports_multiple_targets(tmp_path) -> None:
     app = load_config(cfg)
 
     assert isinstance(app, AppConfig)
-    assert set(app.targets) == {"snowstorm", "lite"}
-    assert app.targets["snowstorm"].base_url == "http://localhost:8080"
-    assert app.targets["lite"].fhir_path == "/fhir"
+    assert set(app.targets) == {"lite-int", "lite-nz"}
+    assert app.targets["lite-int"].base_url == "http://localhost:8081"
+    assert app.targets["lite-nz"].fhir_path == "/fhir"
 
 
 def test_invalid_basic_auth_fails_fast(tmp_path) -> None:
@@ -61,10 +66,9 @@ def test_config_with_terminology_name_and_default(tmp_path) -> None:
     cfg.write_text(
         textwrap.dedent(
             """
+            server_mode: lite
             default_terminology: snomedct-us
             targets:
-              snowstorm:
-                base_url: http://localhost:8080
               lite:
                 base_url: http://localhost:8081
                 mode: lite
@@ -78,7 +82,6 @@ def test_config_with_terminology_name_and_default(tmp_path) -> None:
 
     assert app.default_terminology == "snomedct-us"
     assert app.targets["lite"].terminology_name == "snomedct-us"
-    assert app.targets["snowstorm"].terminology_name is None
 
 
 def test_terminology_name_is_normalized(tmp_path) -> None:
@@ -86,6 +89,7 @@ def test_terminology_name_is_normalized(tmp_path) -> None:
     cfg.write_text(
         textwrap.dedent(
             """
+            server_mode: lite
             targets:
               lite:
                 base_url: http://localhost:8081

@@ -49,10 +49,15 @@ dev/integration/import_snomed.sh \
   --rf2-zip /path/to/SnomedCT_InternationalRF2_PRODUCTION_YYYYMMDDT120000Z.zip
 ```
 
-Run the integration suite against the provided Docker config:
+Run the integration suite against each backend:
 
 ```bash
-SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-integration.yaml \
+# Snowstorm (full)
+SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-snowstorm.yaml \
+  ./.venv/bin/pytest -q tests/integration
+
+# Snowstorm Lite
+SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-lite.yaml \
   ./.venv/bin/pytest -q tests/integration
 ```
 
