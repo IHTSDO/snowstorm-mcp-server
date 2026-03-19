@@ -199,6 +199,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "'http://snomed.info/sct?fhir_vs=ecl/<<27624003:363698007=<<39057004' (attribute constraint). "
             "Omit value_set_url to use the default implicit SNOMED ValueSet. "
             "Use filter for text filtering within the expansion. "
+            "Set fuzzy=true to enable approximate/fuzzy matching on the filter text for misspelled or partial terms. "
             "Use summary_only=true to get only the count without returning all items."
         ),
         annotations=_READ_ONLY_ANNOTATIONS,
@@ -213,6 +214,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         count: int = 20,
         summary_only: bool = False,
         max_contains: int = 100,
+        fuzzy: bool = False,
     ) -> dict[str, Any]:
         return _tool_guard(
             lambda: runtime.snomed_expand(
@@ -224,6 +226,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                 count=count,
                 summary_only=summary_only,
                 max_contains=max_contains,
+                fuzzy=fuzzy,
             )
         )
 

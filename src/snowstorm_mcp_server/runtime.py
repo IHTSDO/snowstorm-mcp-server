@@ -169,6 +169,7 @@ class ServerRuntime:
         count: int = 20,
         summary_only: bool = False,
         max_contains: int = 100,
+        fuzzy: bool = False,
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
         applied_max_contains = min(max_contains, self.config.response_limits.max_expand_contains)
@@ -180,6 +181,7 @@ class ServerRuntime:
                 count=count,
                 summary_only=summary_only,
                 max_contains=applied_max_contains,
+                fuzzy=fuzzy,
             )
         return {"terminology": info.name, **result.model_dump()}
 

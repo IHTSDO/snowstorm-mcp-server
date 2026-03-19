@@ -199,6 +199,7 @@ class SnomedLookupService:
         count: int = 20,
         summary_only: bool = False,
         max_contains: int = 100,
+        fuzzy: bool = False,
     ) -> ExpandResult:
         if offset < 0:
             raise ValueError("offset must be >= 0")
@@ -214,7 +215,7 @@ class SnomedLookupService:
             "count": count,
         }
         if filter:
-            params["filter"] = filter
+            params["filter"] = f"{filter}~" if fuzzy else filter
 
         url = f"{self.target.fhir_base_url}/ValueSet/$expand"
         data = self.client.request("GET", url, params=params, expect_json=True)

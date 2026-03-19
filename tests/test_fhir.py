@@ -273,3 +273,37 @@ def test_expand_parses_real_valueset_expand_payload_fixture() -> None:
     assert result.truncated is False
     codes = {item.code for item in result.contains}
     assert "22298006" in codes
+
+
+def test_expand_fuzzy_appends_tilde_to_filter() -> None:
+    target = TargetConfig(base_url="http://test")
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["query"] = dict(request.url.params)
+        return httpx.Response(
+            200,
+            json={"resourceType": "ValueSet", "expansion": {"contains": []}},
+        )
+
+    with _make_service(target, handler) as svc:
+        svc.expand(filter="myocardal", fuzzy=True)
+
+    assert seen["query"]["filter"] == "myocardal~"
+
+
+def test_expand_no_fuzzy_does_not_append_tilde() -> None:
+    target = TargetConfig(base_url="http://test")
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["query"] = dict(request.url.params)
+        return httpx.Response(
+            200,
+            json={"resourceType": "ValueSet", "expansion": {"contains": []}},
+        )
+
+    with _make_service(target, handler) as svc:
+        svc.expand(filter="myocardial", fuzzy=False)
+
+    assert seen["query"]["filter"] == "myocardial"
