@@ -2,7 +2,19 @@
 
 [![CI](https://github.com/IHTSDO/snowstorm-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/IHTSDO/snowstorm-mcp-server/actions/workflows/ci.yml)
 
-Python MCP server for SNOMED terminology on Snowstorm and Snowstorm Lite.
+An MCP server for querying [SNOMED CT](https://www.snomed.org/) clinical terminology
+via [Snowstorm](https://github.com/IHTSDO/snowstorm) and
+[Snowstorm Lite](https://github.com/IHTSDO/snowstorm-lite) backends.
+
+SNOMED CT is the world's most comprehensive clinical terminology, used in
+electronic health records across 80+ countries. This server exposes SNOMED CT
+lookup, search, validation, hierarchy navigation, and value set expansion
+through the [Model Context Protocol (MCP)](https://modelcontextprotocol.io),
+enabling AI assistants to work with clinical terminology directly.
+
+Supports all SNOMED CT editions available on the connected backend (International,
+US, UK, AU, etc.). No user account is required when connected to a public
+Snowstorm instance.
 
 ## Quick start (local dev)
 
@@ -147,20 +159,23 @@ becomes the default automatically.
 
 ### Available MCP tools
 
-| Tool | Description |
-|------|-------------|
-| `list_terminologies` | List available SNOMED terminologies and the default |
-| `server_health` | Check reachability and capabilities for a terminology |
-| `server_capabilities` | Detailed backend info for a terminology |
-| `fhir_metadata` | FHIR CapabilityStatement summary (optional raw payload) |
-| `snomed_expand` | FHIR ValueSet/$expand (implicit SNOMED ValueSet supported) |
-| `snomed_lookup` | FHIR CodeSystem/$lookup |
-| `snomed_validate_code` | FHIR CodeSystem/$validate-code |
-| `snomed_subsumes` | FHIR CodeSystem/$subsumes |
-| `snowstorm_list_codesystems` | Native Snowstorm code system summaries (Snowstorm only) |
-| `snowstorm_list_versions` | Native Snowstorm code system versions (Snowstorm only) |
-| `snowstorm_search_concepts` | Native concept search (Snowstorm only) |
-| `snowstorm_get_concept_native` | Native concept detail (Snowstorm only) |
+| Tool | Description | Backend |
+|------|-------------|---------|
+| `list_terminologies` | List available SNOMED terminologies and the default | All |
+| `server_health` | Check reachability and capabilities for a terminology | All |
+| `server_capabilities` | Detailed backend info for a terminology | All |
+| `fhir_metadata` | FHIR CapabilityStatement summary (optional raw payload) | All |
+| `snomed_expand` | FHIR ValueSet/$expand with ECL support | All |
+| `snomed_lookup` | FHIR CodeSystem/$lookup | All |
+| `snomed_validate_code` | FHIR CodeSystem/$validate-code | All |
+| `snomed_subsumes` | FHIR CodeSystem/$subsumes | All |
+| `snomed_get_ancestors` | Get ancestor concepts via IS-A hierarchy (ECL-based) | All |
+| `snomed_get_children` | Get direct children of a concept (ECL-based) | All |
+| `snomed_get_descendants` | Get all descendants of a concept (ECL-based) | All |
+| `snowstorm_list_codesystems` | Native code system summaries | Snowstorm only |
+| `snowstorm_list_versions` | Native code system versions | Snowstorm only |
+| `snowstorm_search_concepts` | Native concept search by term | Snowstorm only |
+| `snowstorm_get_concept_native` | Native concept detail with synonyms | Snowstorm only |
 
 All tools accept an optional `terminology` parameter (e.g., `"snomedct-us"`).
 Most tools also accept optional `target` to constrain routing/disambiguate target selection.
@@ -291,3 +306,8 @@ Practical guidance:
 - For short acronyms, include context (for example use a longer phrase instead of `AD`).
 
 The MCP server validates this early and returns a clear error message before calling Snowstorm.
+
+## License and privacy
+
+This project is licensed under [Apache 2.0](LICENSE).
+See [PRIVACY.md](PRIVACY.md) for the privacy policy.

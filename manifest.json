@@ -1,0 +1,20 @@
+{
+  "manifest_version": "0.2",
+  "server": {
+    "name": "snowstorm-mcp-server",
+    "display_name": "SNOMED CT Terminology Server",
+    "description": "Query SNOMED CT clinical terminology — lookup, search, validation, hierarchy navigation, and value set expansion via Snowstorm and Snowstorm Lite backends. Supports all SNOMED CT editions (International, US, UK, AU, etc.).",
+    "version": "0.1.0",
+    "author": "SNOMED International",
+    "license": "Apache-2.0",
+    "homepage": "https://github.com/IHTSDO/snowstorm-mcp-server",
+    "repository": "https://github.com/IHTSDO/snowstorm-mcp-server",
+    "privacy_policies": ["https://github.com/IHTSDO/snowstorm-mcp-server/blob/main/PRIVACY.md"]
+  },
+  "transport": {
+    "type": "streamable-http"
+  },
+  "auth": {
+    "type": "none"
+  }
+}
