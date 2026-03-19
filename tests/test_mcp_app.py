@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
-from snowstorm_mcp_server.mcp_app import create_mcp_app
+from snowstorm_mcp_server.mcp_app import MAX_RESPONSE_CHARS, _truncate_response, create_mcp_app
 
 
 @pytest.fixture()
@@ -78,6 +80,39 @@ def _call_tool(mcp_app, name: str, arguments: dict):
         if tool_fn.name == name:
             return tool_fn.fn(**arguments)
     raise KeyError(f"Tool {name!r} not registered")
+
+
+class TestToolAnnotations:
+    def test_all_tools_have_read_only_annotations(self, mcp):
+        """Every registered tool must carry readOnlyHint=True, destructiveHint=False."""
+        tools = mcp._tool_manager._tools.values()
+        assert len(list(tools)) > 0, "No tools registered"
+        for tool in tools:
+            ann = tool.annotations
+            assert ann is not None, f"Tool {tool.name!r} is missing annotations"
+            assert ann.readOnlyHint is True, f"Tool {tool.name!r}: readOnlyHint should be True"
+            assert ann.destructiveHint is False, f"Tool {tool.name!r}: destructiveHint should be False"
+
+
+class TestResponseTruncation:
+    def test_small_response_unchanged(self):
+        result = {"items": [1, 2, 3], "total": 3}
+        assert _truncate_response(result) == result
+
+    def test_large_response_is_truncated(self):
+        big_list = [{"data": "x" * 200} for _ in range(2000)]
+        result = {"items": big_list, "total": len(big_list)}
+        truncated = _truncate_response(result)
+        serialised = json.dumps(truncated, default=str)
+        assert len(serialised) <= MAX_RESPONSE_CHARS
+        assert truncated["_truncated"] is True
+        assert "_truncation_notice" in truncated
+        assert len(truncated["items"]) < len(big_list)
+
+    def test_no_list_fields_returns_as_is(self):
+        result = {"data": "x" * 200_000}
+        truncated = _truncate_response(result)
+        assert "_truncated" not in truncated
 
 
 class TestSnomedGetAncestors:
