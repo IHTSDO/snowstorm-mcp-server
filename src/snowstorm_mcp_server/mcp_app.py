@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,8 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
 
     mcp = FastMCP(
         "snowstorm-mcp-server",
+        host=os.environ.get("FASTMCP_HOST", "127.0.0.1"),
+        port=int(os.environ.get("FASTMCP_PORT", "8000")),
         instructions=(
             "Use the available tools to query SNOMED terminologies. "
             "Each terminology represents a SNOMED edition (e.g. 'snomedct', 'snomedct-us'). "
@@ -395,6 +398,17 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                 max_synonyms=max_synonyms,
             )
         )
+
+    # --- Favicon for Anthropic Connector Directory listing ---------------
+    _favicon_path = Path(__file__).resolve().parent / "static" / "favicon.svg"
+
+    @mcp.custom_route("/favicon.ico", methods=["GET"])
+    async def favicon(request):  # noqa: ARG001
+        from starlette.responses import FileResponse, Response
+
+        if _favicon_path.is_file():
+            return FileResponse(_favicon_path, media_type="image/svg+xml")
+        return Response(status_code=404)
 
     return mcp
 

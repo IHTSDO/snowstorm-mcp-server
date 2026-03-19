@@ -1,0 +1,27 @@
+# Configuration for the public SNOMED International Snowstorm instance.
+# Used for the hosted Anthropic Connector deployment.
+#
+# The public browser API is at https://browser.ihtsdotools.org/snowstorm/snomed-ct
+# and serves multiple SNOMED CT editions (International, US, UK, AU, etc.).
+#
+# Note: this is a shared public instance — be mindful of request volume.
+# Consider adding response caching at the deployment layer.
+
+# The public Snowstorm instance hosts multiple editions.
+# Set snomedct (International) as the default so callers can omit the
+# terminology parameter for common queries.
+default_terminology: snomedct
+
+response_limits:
+  max_expand_contains: 100
+  max_search_hits: 50
+  max_synonyms: 25
+
+targets:
+  public-snowstorm:
+    base_url: "https://browser.ihtsdotools.org/snowstorm/snomed-ct"
+    mode: "snowstorm"
+    fhir_path: "/fhir"
+    timeout_seconds: 30
+    auth:
+      mode: "none"
