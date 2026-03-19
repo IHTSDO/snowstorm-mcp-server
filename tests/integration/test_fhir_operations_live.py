@@ -95,3 +95,30 @@ def test_subsumes_live_on_lite_target_if_available() -> None:
         rel = svc.subsumes(code_a=mi_code, code_b=ami_code)
 
     assert rel.outcome in {"subsumes", "equivalent"}, f"{mi_desc} vs {ami_desc}"
+
+
+@pytest.mark.integration
+def test_expand_fuzzy_search_on_lite_target_if_available() -> None:
+    """Fuzzy search via FHIR ValueSet/$expand on Snowstorm Lite using ~ suffix."""
+    _target_name, target = _find_target_by_backend(BackendType.LITE)
+    mi_code, _mi_desc = MYOCARDIAL_INFARCTION
+    misspelled = "myocardal"
+
+    with SnomedLookupService(target) as svc:
+        # Without fuzzy, the misspelled term should return no results
+        exact_result = svc.expand(filter=misspelled, count=10)
+        assert exact_result.total == 0 or exact_result.returned == 0, (
+            f"Expected no results for misspelled '{misspelled}' without fuzzy, "
+            f"but got total={exact_result.total}, returned={exact_result.returned}"
+        )
+
+        # With fuzzy, the same misspelled term should match
+        fuzzy_result = svc.expand(filter=misspelled, count=10, fuzzy=True)
+
+    assert fuzzy_result.total is not None and fuzzy_result.total >= 1, (
+        f"Fuzzy expand should return at least one result for misspelled '{misspelled}'"
+    )
+    codes = {item.code for item in fuzzy_result.contains}
+    assert mi_code in codes, (
+        f"Expected {mi_code} (Myocardial infarction) in fuzzy results, got: {codes}"
+    )
