@@ -11,13 +11,13 @@
 - Run local checks:
   - `./scripts/check.sh`
 - Run integration checks (when release infra is available):
-  - `SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-snowstorm.yaml ./.venv/bin/pytest -q tests/integration`
-  - `SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-lite.yaml ./.venv/bin/pytest -q tests/integration`
+  - `SNOWSTORM_MCP_TEST_CONFIG=example-configs/config.docker-snowstorm.yaml ./.venv/bin/pytest -q tests/integration`
+  - `SNOWSTORM_MCP_TEST_CONFIG=example-configs/config.docker-lite.yaml ./.venv/bin/pytest -q tests/integration`
 
 ## 3. Smoke test steps
 
 - Start the server with local config and verify MCP boot:
-  - `python -m snowstorm_mcp_server --config examples/config.local.yaml --help`
+  - `python -m snowstorm_mcp_server --config example-configs/config.local.yaml --help`
 - Validate basic tool surface (manual smoke):
   - `list_terminologies`
   - `server_health`

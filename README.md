@@ -42,30 +42,39 @@ dev/integration/import_snomed.sh \
   --rf2-zip ../SnomedCT_InternationalRF2_PRODUCTION_20251101T120000Z.zip
 ```
 
-Run integration tests against each backend:
+Run integration tests against each backend. Set `SNOWSTORM_MCP_TEST_CONFIG` in
+your `.env` to point at the relevant config, then:
 
 ```bash
-SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-snowstorm.yaml ./.venv/bin/pytest -q tests/integration
-SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-lite.yaml ./.venv/bin/pytest -q tests/integration
+uv run pytest -q tests/integration
 ```
 
 ## Running the server
 
-The server reads its config from a YAML file (see `examples/config.local.yaml`).
-Point it at your Snowstorm instance via `--config` or the `SNOWSTORM_MCP_CONFIG` env var.
+The server reads its config from a YAML file (see `example-configs/config.local.yaml`).
+Create a `.env` file in the project root to set the config path and any secrets
+(see `.env.example`):
+
+```bash
+cp .env.example .env
+# edit .env to point at your config file
+```
+
+The server automatically loads `.env` from the current working directory at startup.
+Existing shell environment variables take precedence over `.env` values.
 
 **stdio** (for Claude Desktop and most MCP clients):
 
 ```bash
-SNOWSTORM_MCP_CONFIG=examples/config.local.yaml uv run snowstorm-mcp-server --transport stdio
+uv run snowstorm-mcp-server --transport stdio
 ```
 
 **SSE / Streamable HTTP** (for HTTP-based MCP clients):
 
 ```bash
-SNOWSTORM_MCP_CONFIG=examples/config.local.yaml uv run snowstorm-mcp-server --transport sse
+uv run snowstorm-mcp-server --transport sse
 # or
-SNOWSTORM_MCP_CONFIG=examples/config.local.yaml uv run snowstorm-mcp-server --transport streamable-http
+uv run snowstorm-mcp-server --transport streamable-http
 ```
 
 **Claude Desktop config example** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
@@ -80,14 +89,15 @@ SNOWSTORM_MCP_CONFIG=examples/config.local.yaml uv run snowstorm-mcp-server --tr
         "--project", "/path/to/snowstorm-mcp-server",
         "snowstorm-mcp-server",
         "--transport", "stdio"
-      ],
-      "env": {
-        "SNOWSTORM_MCP_CONFIG": "/path/to/snowstorm-mcp-server/examples/config.local.yaml"
-      }
+      ]
     }
   }
 }
 ```
+
+> **Note:** Claude Desktop runs `uv` from the project directory, so it picks up
+> the `.env` file automatically. If you prefer explicit env vars, pass them via
+> the `"env"` key in the Claude Desktop config.
 
 ## Hosted deployment (Docker)
 
@@ -112,11 +122,20 @@ with automatic TLS (Cloud Run, Fly.io, Railway, etc.).
 
 ## Local config example
 
-See `examples/config.local.yaml` (Snowstorm at `http://localhost:8080`).
+See `example-configs/config.local.yaml` (Snowstorm at `http://localhost:8080`).
 
-### Multi-target config example (Snowstorm + Lite)
+### Backend type restriction
+
+A single configuration must use **either** Snowstorm **or** Snowstorm Lite targets —
+mixing both in the same config is not supported. The `server_mode` field must match
+the target type (`"snowstorm"` for Snowstorm targets, `"lite"` for Lite targets).
+
+Multiple Snowstorm Lite instances are supported (one per SNOMED edition).
+
+### Multi-edition Lite config example
 
 ```yaml
+server_mode: "lite"
 default_terminology: snomedct
 response_limits:
   max_expand_contains: 100
@@ -124,15 +143,16 @@ response_limits:
   max_synonyms: 25
 
 targets:
-  snowstorm:
-    base_url: "http://localhost:8080"
-    mode: "auto"
+  lite-int:
+    base_url: "http://localhost:8081"
+    mode: "lite"
+    terminology_name: "snomedct"
     fhir_path: "/fhir"
     auth:
       mode: "none"
 
   lite-us:
-    base_url: "http://localhost:8081"
+    base_url: "http://localhost:8082"
     mode: "lite"
     terminology_name: "snomedct-us"
     fhir_path: "/fhir"
