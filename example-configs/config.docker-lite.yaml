@@ -1,7 +1,7 @@
 # MCP config for a Dockerised Snowstorm Lite instance.
 #
 # Start the stack via docker-compose.integration.yml, then point here:
-#   SNOWSTORM_MCP_CONFIG=examples/config.docker-lite.yaml \
+#   SNOWSTORM_MCP_CONFIG=example-configs/config.docker-lite.yaml \
 #   ./.venv/bin/pytest -q tests/integration
 
 server_mode: "lite"

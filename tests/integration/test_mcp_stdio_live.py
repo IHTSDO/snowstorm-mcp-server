@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.types import CallToolResult
@@ -13,7 +14,7 @@ from mcp.types import CallToolResult
 CONFIG_PATH = Path(
     os.getenv(
         "SNOWSTORM_MCP_TEST_CONFIG",
-        str(Path(__file__).resolve().parents[2] / "examples" / "config.local.yaml"),
+        str(Path(__file__).resolve().parents[2] / "example-configs" / "config.local.yaml"),
     )
 )
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -25,6 +26,14 @@ ACUTE_MYOCARDIAL_INFARCTION = ("57054005", "Acute myocardial infarction")
 def _ensure_local_config() -> None:
     if not CONFIG_PATH.exists():
         pytest.skip(f"Missing local config file: {CONFIG_PATH}")
+
+
+def _server_mode() -> str:
+    if not CONFIG_PATH.exists():
+        return "snowstorm"
+    with open(CONFIG_PATH, encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    return data.get("server_mode", "snowstorm")
 
 
 async def _call_tool(session: ClientSession, name: str, arguments: dict) -> CallToolResult:
@@ -55,7 +64,7 @@ async def test_mcp_stdio_lists_terminologies_and_capabilities() -> None:
 
             tools = await session.list_tools()
             tool_names = {tool.name for tool in tools.tools}
-            assert {
+            common_tools = {
                 "list_terminologies",
                 "server_health",
                 "server_capabilities",
@@ -63,11 +72,15 @@ async def test_mcp_stdio_lists_terminologies_and_capabilities() -> None:
                 "snomed_lookup",
                 "snomed_validate_code",
                 "snomed_subsumes",
-                "snowstorm_list_codesystems",
-                "snowstorm_list_versions",
-                "snowstorm_search_concepts",
-                "snowstorm_get_concept_native",
-            } <= tool_names
+            }
+            assert common_tools <= tool_names
+            if _server_mode() == "snowstorm":
+                assert {
+                    "snowstorm_list_codesystems",
+                    "snowstorm_list_versions",
+                    "snowstorm_search_concepts",
+                    "snowstorm_get_concept_native",
+                } <= tool_names
 
             list_result = await _call_tool(session, "list_terminologies", {})
             terminologies = list_result.structuredContent["terminologies"]
@@ -79,7 +92,7 @@ async def test_mcp_stdio_lists_terminologies_and_capabilities() -> None:
             payload = cap_result.structuredContent
             assert "terminology" in payload
             assert payload["capabilities"]["has_fhir"] is True
-            assert payload["backend_type"] in {"snowstorm", "unknown"}
+            assert payload["backend_type"] in {"snowstorm", "lite", "unknown"}
 
             meta_summary = await _call_tool(
                 session,
@@ -163,6 +176,8 @@ async def test_mcp_stdio_snomed_expand_live() -> None:
 @pytest.mark.anyio
 async def test_mcp_stdio_snowstorm_list_codesystems_and_versions_live() -> None:
     _ensure_local_config()
+    if _server_mode() != "snowstorm":
+        pytest.skip("Snowstorm-native test — skipped for Lite config")
     async with stdio_client(_server_params()) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
@@ -191,6 +206,8 @@ async def test_mcp_stdio_snowstorm_list_codesystems_and_versions_live() -> None:
 @pytest.mark.anyio
 async def test_mcp_stdio_snowstorm_search_concepts_live() -> None:
     _ensure_local_config()
+    if _server_mode() != "snowstorm":
+        pytest.skip("Snowstorm-native test — skipped for Lite config")
     mi_code, mi_desc = MYOCARDIAL_INFARCTION
     async with stdio_client(_server_params()) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
@@ -211,6 +228,8 @@ async def test_mcp_stdio_snowstorm_search_concepts_live() -> None:
 @pytest.mark.anyio
 async def test_mcp_stdio_snowstorm_get_concept_native_live() -> None:
     _ensure_local_config()
+    if _server_mode() != "snowstorm":
+        pytest.skip("Snowstorm-native test — skipped for Lite config")
     mi_code, _mi_desc = MYOCARDIAL_INFARCTION
     async with stdio_client(_server_params()) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:

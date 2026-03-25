@@ -53,11 +53,11 @@ Run the integration suite against each backend:
 
 ```bash
 # Snowstorm (full)
-SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-snowstorm.yaml \
+SNOWSTORM_MCP_TEST_CONFIG=example-configs/config.docker-snowstorm.yaml \
   ./.venv/bin/pytest -q tests/integration
 
 # Snowstorm Lite
-SNOWSTORM_MCP_TEST_CONFIG=examples/config.docker-lite.yaml \
+SNOWSTORM_MCP_TEST_CONFIG=example-configs/config.docker-lite.yaml \
   ./.venv/bin/pytest -q tests/integration
 ```
 

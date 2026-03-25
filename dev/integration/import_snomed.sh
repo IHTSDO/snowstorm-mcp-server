@@ -12,7 +12,10 @@ POLL_TIMEOUT_SECONDS="${POLL_TIMEOUT_SECONDS:-5400}"
 
 usage() {
   cat <<'EOF'
-Usage: dev/integration/import_snomed.sh --rf2-zip /path/to/SnomedCT_...zip [options]
+Usage: dev/integration/import_snomed.sh [--rf2-zip /path/to/SnomedCT_...zip] [options]
+
+If --rf2-zip is omitted, the most recent RF2 zip in SNOMED_RF2_DIR is used
+(set SNOMED_RF2_DIR in your .env file).
 
 Options:
   --rf2-zip PATH                  RF2 zip to import into Snowstorm and Snowstorm Lite.
@@ -43,8 +46,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$RF2_ZIP" && -n "${SNOMED_RF2_DIR:-}" ]]; then
+  RF2_DIR="$(eval echo "$SNOMED_RF2_DIR")"
+  if [[ -d "$RF2_DIR" ]]; then
+    RF2_ZIP="$(find "$RF2_DIR" -maxdepth 1 -name 'SnomedCT_*RF2*.zip' -type f | sort -r | head -1)"
+    if [[ -n "$RF2_ZIP" ]]; then
+      echo "Auto-selected RF2 from SNOMED_RF2_DIR: $RF2_ZIP"
+    fi
+  fi
+fi
+
 if [[ -z "$RF2_ZIP" ]]; then
-  echo "Missing --rf2-zip" >&2
+  echo "Missing --rf2-zip (or set SNOMED_RF2_DIR to auto-select)" >&2
   usage
   exit 2
 fi
