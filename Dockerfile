@@ -5,7 +5,8 @@ WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
 COPY src/ src/
 
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir . \
+    && useradd --system --no-create-home appuser
 
 # Default config — override at runtime via SNOWSTORM_MCP_CONFIG env var
 # or mount a custom config file.
@@ -18,5 +19,10 @@ ENV FASTMCP_HOST=0.0.0.0
 ENV FASTMCP_PORT=8000
 
 EXPOSE 8000
+
+USER appuser
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import socket; s=socket.create_connection(('localhost',8000),timeout=3); s.close()" || exit 1
 
 CMD ["snowstorm-mcp-server", "--transport", "streamable-http"]
