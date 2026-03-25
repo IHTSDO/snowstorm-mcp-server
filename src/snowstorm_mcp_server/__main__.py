@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 
+from dotenv import find_dotenv, load_dotenv
+
 from .mcp_app import create_mcp_app
 
 
@@ -22,6 +24,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    load_dotenv(find_dotenv(usecwd=True))
     args = build_arg_parser().parse_args()
     app = create_mcp_app(args.config)
     app.run(transport=args.transport)
