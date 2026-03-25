@@ -97,6 +97,38 @@ class AppConfig(BaseModel):
             self.default_terminology = self.default_terminology.strip().lower()
         return self
 
+    @model_validator(mode="after")
+    def validate_no_mixed_backend_types(self) -> AppConfig:
+        """Ensure all targets use the same backend type (snowstorm or lite).
+
+        Mixing Snowstorm and Snowstorm Lite targets in a single config is not
+        supported.  Multiple Lite instances are fine (one per edition).
+        """
+        modes = {
+            name: ("snowstorm" if cfg.mode in ("snowstorm", "auto") else "lite")
+            for name, cfg in self.targets.items()
+        }
+        unique = set(modes.values())
+        if len(unique) > 1:
+            detail = ", ".join(
+                f"'{name}' (mode={self.targets[name].mode})"
+                for name in sorted(modes)
+            )
+            raise ValueError(
+                "All targets must use the same backend type. "
+                "Mixing Snowstorm and Snowstorm Lite targets is not supported. "
+                f"Targets: {detail}"
+            )
+        if unique:
+            effective = unique.pop()
+            if effective != self.server_mode:
+                raise ValueError(
+                    f"server_mode is '{self.server_mode}' but all targets "
+                    f"are configured as '{effective}'. "
+                    f"Set server_mode to '{effective}' or change target modes."
+                )
+        return self
+
 
 
 def _load_raw_data(path: Path) -> dict[str, Any]:
