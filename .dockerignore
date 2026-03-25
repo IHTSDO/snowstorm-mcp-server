@@ -6,6 +6,8 @@
 .ruff_cache
 __pycache__
 *.pyc
+.env
+.env.*
 tests/
 dev/
 docs/
