@@ -44,6 +44,7 @@ class TargetConfig(BaseModel):
     verify_tls: bool = True
     auth: AuthConfig = Field(default_factory=AuthConfig)
     terminology_name: str | None = None
+    user_agent: str | None = None
 
     @model_validator(mode="after")
     def normalize_fields(self) -> TargetConfig:

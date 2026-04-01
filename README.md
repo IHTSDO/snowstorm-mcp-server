@@ -109,7 +109,8 @@ docker run -p 8000:8000 snowstorm-mcp-server
 ```
 
 The server starts in Streamable HTTP mode on port 8000 using the
-bundled `config.public-snowstorm.yaml`. Override the config at runtime:
+bundled `config.docker-snowstorm.yaml` (expects a local Snowstorm at
+`http://localhost:8080`). Mount your own config at runtime:
 
 ```bash
 docker run -p 8000:8000 \

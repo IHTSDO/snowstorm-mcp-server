@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 from pydantic import BaseModel, ConfigDict
 
 from .capabilities import BackendType, TargetStatus, probe_target
 from .config import AppConfig, TargetConfig
 from .http_client import HttpClient, HttpRequestError
+
+logger = logging.getLogger(__name__)
 
 
 class TerminologyInfo(BaseModel):
@@ -256,7 +260,21 @@ def build_registry(config: AppConfig) -> TerminologyRegistry:
 
     default = config.default_terminology
     if default:
-        registry.set_default(default.strip().lower())
+        try:
+            registry.set_default(default.strip().lower())
+        except TerminologyNotFoundError:
+            available = ", ".join(registry.list_terminology_names()) or "(none)"
+            logger.warning(
+                "default_terminology '%s' not found (available: %s). "
+                "This usually means the backend was unreachable during startup "
+                "and terminology auto-discovery failed. "
+                "The server will start without a default terminology.",
+                default,
+                available,
+            )
+            registry.discovery_errors.append(
+                f"default_terminology '{default}' not found; continuing without a default"
+            )
     elif len(registry._terminologies) == 1:
         only_name = next(iter(registry._terminologies))
         registry.set_default(only_name)
