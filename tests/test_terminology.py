@@ -395,3 +395,42 @@ def test_build_registry_fallback_on_discovery_failure(monkeypatch) -> None:
 
     assert "mysnowstorm" in registry.list_terminology_names()
     assert len(registry.discovery_errors) == 1
+
+
+def test_build_registry_default_terminology_graceful_on_discovery_failure(monkeypatch) -> None:
+    """When discovery fails and the fallback terminology name doesn't match
+    default_terminology, the server should start without a default rather than crash."""
+    config = AppConfig(
+        default_terminology="snomedct",
+        targets={
+            "dev-snowstorm": TargetConfig(base_url="http://test"),
+        },
+    )
+
+    from snowstorm_mcp_server import capabilities, terminology
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/fhir/metadata":
+            return httpx.Response(200, json={"resourceType": "CapabilityStatement"})
+        if request.url.path == "/browser/MAIN/descriptions":
+            return httpx.Response(200, json={"items": []})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+
+    def patched_probe(target, *, client=None):
+        raw = httpx.Client(transport=transport, base_url=target.base_url)
+        return capabilities.probe_target(target, client=HttpClient(target, client=raw))
+
+    def patched_discover(target_name, target, *, client=None):
+        raise DiscoveryError("429 Too Many Requests")
+
+    monkeypatch.setattr(terminology, "probe_target", patched_probe)
+    monkeypatch.setattr(terminology, "discover_snowstorm_terminologies", patched_discover)
+
+    # Previously this would raise TerminologyNotFoundError and crash
+    registry = build_registry(config)
+
+    assert registry.default_terminology is None
+    assert "dev-snowstorm" in registry.list_terminology_names()
+    assert any("default_terminology" in e for e in registry.discovery_errors)

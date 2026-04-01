@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir . \
 
 # Default config — override at runtime via SNOWSTORM_MCP_CONFIG env var
 # or mount a custom config file.
-COPY example-configs/config.public-snowstorm.yaml /app/config.yaml
+COPY example-configs/config.docker-snowstorm.yaml /app/config.yaml
 ENV SNOWSTORM_MCP_CONFIG=/app/config.yaml
 
 # Bind to 0.0.0.0 so the container is reachable from outside.
