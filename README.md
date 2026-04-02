@@ -69,6 +69,11 @@ Existing shell environment variables take precedence over `.env` values.
 uv run snowstorm-mcp-server --transport stdio
 ```
 
+Use `--log-level DEBUG|INFO|WARNING|ERROR` to control verbosity (default: `INFO`).
+Logs go to stderr and are captured by Claude Desktop in `mcp-server-snowstorm.log`.
+The server prints the active guard configuration on startup so you can confirm
+settings are being loaded from the right config file.
+
 **SSE / Streamable HTTP** (for HTTP-based MCP clients):
 
 ```bash
@@ -119,7 +124,9 @@ docker run -p 8000:8000 \
 ```
 
 For production, deploy behind an HTTPS reverse proxy or on a platform
-with automatic TLS (Cloud Run, Fly.io, Railway, etc.).
+with automatic TLS (Cloud Run, Fly.io, Railway, etc.). For public-facing
+deployments, configure rate limiting at both the reverse proxy (IP-based)
+and the application level (per-session) — see [Performance guards](#performance-guards) below.
 
 ## Local config example
 
@@ -142,6 +149,21 @@ response_limits:
   max_expand_contains: 100
   max_search_hits: 50
   max_synonyms: 25
+
+# Guards — all values shown are defaults. Omit the block to use defaults.
+# For public-facing deployments, set per_session_rate_limit_calls.
+# guards:
+#   rate_limit_calls: 10
+#   rate_limit_window_seconds: 60
+#   max_concurrent_requests: 3
+#   max_count_per_call: 500
+#   large_result_threshold: 1000
+#   max_children_calls_per_minute: 5
+#   per_session_rate_limit_calls: null   # set an integer to enable
+#   block_zero_cardinality_on_large_sets: false  # set true to block [0..0] on top-level roots
+#   enable_expansion_size_guard: false   # preflight summary check for any non-summary expansion
+#   expansion_count_threshold: 20000     # block if total concepts exceeds this value
+#   size_cache_ttl_seconds: 86400
 
 targets:
   lite-int:
@@ -316,6 +338,56 @@ parameters rather than branch paths.
 Additional backend capability notes and v0.1 scope boundaries are documented in
 `docs/v0.1-capability-matrix.md`.
 Release tagging/smoke steps are in `docs/release-v0.1-checklist.md`.
+
+## Performance guards
+
+All tools that make backend HTTP calls share a common set of guards to protect
+the Snowstorm instance from overload. These apply regardless of which tool is
+called — `server_health`, `server_capabilities`, `fhir_metadata`,
+`snomed_expand`, `snomed_lookup`, `snomed_validate_code`, `snomed_subsumes`,
+all hierarchy tools, and all `snowstorm_*` native tools.
+
+Guards that are always active:
+
+| Guard | Default | Description |
+|-------|---------|-------------|
+| Global rate limit | 10 calls / 60 s | Rolling window across all sessions in the process |
+| Concurrency cap | 3 concurrent | Semaphore on parallel Snowstorm requests |
+| ECL pre-screening | — | Blocks known-expensive patterns before they hit the backend |
+| Count capping | 500 max | Hard ceiling on concepts returned per `snomed_expand` call |
+| Recursive traversal detection | 5 hierarchy calls / min | Catches looping `get_children` patterns |
+| Expansion size threshold | disabled | Preflight `summary_only` check — blocks any expansion over N concepts regardless of concept ID |
+
+> **Per-process only.** Guards use in-memory state. If you run multiple server
+> processes behind a load balancer, each process enforces its own independent limits.
+> For shared limits across processes, a Redis-backed implementation is needed.
+
+### Per-session rate limiting
+
+By default, the global rate limit is shared across all connected sessions. One
+active session can exhaust the budget for everyone else. For public-facing
+deployments, enable per-session limiting:
+
+```yaml
+guards:
+  rate_limit_calls: 30            # global ceiling across all sessions
+  rate_limit_window_seconds: 60
+  per_session_rate_limit_calls: 8 # no single session can exhaust the global budget
+```
+
+When `per_session_rate_limit_calls` is set, each MCP session gets its own
+independent rolling window using the same `rate_limit_window_seconds`. Sessions
+are tracked by object identity and are dropped automatically when the underlying
+session object is garbage-collected.
+
+This limits the blast radius of a single heavy user but does not prevent
+abuse via repeated reconnects. For that, add IP-based rate limiting at your
+reverse proxy (Nginx `limit_req`, Caddy `rate_limit`, Cloudflare, etc.).
+
+### Unguarded tools
+
+In-memory tools that do not call the Snowstorm backend are intentionally left
+unguarded: `list_terminologies`.
 
 ## Snowstorm native search constraint (important)
 
