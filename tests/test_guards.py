@@ -8,6 +8,7 @@ from time import monotonic
 import pytest
 
 from snowstorm_mcp_server.guards import (
+    _EXPENSIVE_ROOTS,
     ZERO_CARDINALITY_PATTERNS,
     ChildrenCallTracker,
     ConcurrencyLimiter,
@@ -153,8 +154,6 @@ class TestPreScreenEcl:
 
 
 # ── Parameterized coverage for all expensive roots ────────────────────
-
-from snowstorm_mcp_server.guards import _EXPENSIVE_ROOTS
 
 
 class TestAllExpensiveRootsCoverage:

@@ -472,14 +472,9 @@ class TestExpansionPreflightConcurrency:
 
     def test_preflight_acquires_concurrency_semaphore(self, monkeypatch):
         """The preflight summary_only query must go through the concurrency limiter."""
-        import threading
-
         from snowstorm_mcp_server.runtime import ServerRuntime
 
         semaphore_log = []
-
-        # Patch snomed_expand to record whether the semaphore is held
-        original_expand = None
 
         def _tracking_expand(self, **kwargs):
             # The concurrency limiter is a Semaphore(max_concurrent) — if it's
