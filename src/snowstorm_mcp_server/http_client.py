@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
 from typing import Any, Literal, overload
 from urllib.parse import urlparse
 
 import httpx
 
 from .config import AuthConfig, TargetConfig
+
+try:
+    _VERSION = _pkg_version("snowstorm-mcp-server")
+except PackageNotFoundError:
+    _VERSION = "0.0.0"
+
+DEFAULT_USER_AGENT = f"snowstorm-mcp-server/{_VERSION}"
 
 
 class HttpRequestError(RuntimeError):
@@ -44,10 +52,12 @@ class HttpClient:
         self._own_client = client is None
         self._auth = _build_auth(target.auth)
         self._headers = _build_headers(target.auth)
+        ua = target.user_agent or DEFAULT_USER_AGENT
         self._client = client or httpx.Client(
             timeout=target.timeout_seconds,
             verify=target.verify_tls,
             follow_redirects=True,
+            headers={"User-Agent": ua},
         )
 
     def close(self) -> None:

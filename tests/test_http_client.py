@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from snowstorm_mcp_server.config import TargetConfig
-from snowstorm_mcp_server.http_client import HttpClient, HttpRequestError
+from snowstorm_mcp_server.http_client import DEFAULT_USER_AGENT, HttpClient, HttpRequestError
 
 
 def test_http_client_none_auth_sends_no_authorization_header() -> None:
@@ -74,6 +74,56 @@ def test_http_client_headers_mode_injects_static_headers() -> None:
     with HttpClient(target, client=raw) as client:
         client.request("GET", "http://test/health", expect_json=True)
 
+    assert seen["x-api-key"] == "demo-key"
+
+
+def test_http_client_default_user_agent_set_on_client() -> None:
+    target = TargetConfig(base_url="http://test", auth={"mode": "none"})
+    with HttpClient(target) as client:
+        ua = client._client.headers["user-agent"]
+        assert ua == DEFAULT_USER_AGENT
+        assert ua.startswith("snowstorm-mcp-server/")
+
+
+def test_http_client_custom_user_agent_set_on_client() -> None:
+    target = TargetConfig(base_url="http://test", user_agent="MyCustomAgent/2.0", auth={"mode": "none"})
+    with HttpClient(target) as client:
+        assert client._client.headers["user-agent"] == "MyCustomAgent/2.0"
+
+
+def test_http_client_custom_user_agent_sent_in_request() -> None:
+    seen: dict[str, str | None] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["user-agent"] = request.headers.get("User-Agent")
+        return httpx.Response(200, json={"ok": True})
+
+    target = TargetConfig(base_url="http://test", user_agent="MyCustomAgent/2.0", auth={"mode": "none"})
+    raw = httpx.Client(transport=httpx.MockTransport(handler), base_url=target.base_url, headers={"User-Agent": "MyCustomAgent/2.0"})
+    with HttpClient(target, client=raw) as client:
+        client.request("GET", "http://test/health", expect_json=True)
+
+    assert seen["user-agent"] == "MyCustomAgent/2.0"
+
+
+def test_http_client_user_agent_not_clobbered_by_auth_headers() -> None:
+    seen: dict[str, str | None] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["user-agent"] = request.headers.get("User-Agent")
+        seen["x-api-key"] = request.headers.get("X-API-Key")
+        return httpx.Response(200, json={"ok": True})
+
+    target = TargetConfig(
+        base_url="http://test",
+        user_agent="MyCustomAgent/2.0",
+        auth={"mode": "headers", "headers": {"X-API-Key": "demo-key"}},
+    )
+    raw = httpx.Client(transport=httpx.MockTransport(handler), base_url=target.base_url, headers={"User-Agent": "MyCustomAgent/2.0"})
+    with HttpClient(target, client=raw) as client:
+        client.request("GET", "http://test/health", expect_json=True)
+
+    assert seen["user-agent"] == "MyCustomAgent/2.0"
     assert seen["x-api-key"] == "demo-key"
 
 
