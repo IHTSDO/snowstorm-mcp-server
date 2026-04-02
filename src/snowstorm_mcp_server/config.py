@@ -73,7 +73,7 @@ class GuardConfig(BaseModel):
     large_result_threshold: int = Field(default=1000, ge=1)
     max_children_calls_per_minute: int = Field(default=5, ge=1)
     per_session_rate_limit_calls: int | None = Field(default=None, ge=1)
-    block_zero_cardinality_on_large_sets: bool = Field(default=True)
+    block_zero_cardinality_on_large_sets: bool = Field(default=False)
     enable_expansion_size_guard: bool = Field(default=False)
     expansion_count_threshold: int = Field(default=20000, ge=1)
     size_cache_ttl_seconds: int = Field(default=86400, ge=1)

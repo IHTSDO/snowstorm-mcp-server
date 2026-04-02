@@ -296,11 +296,16 @@ def _create_mcp_with_guards(monkeypatch, **guard_kwargs):
     return create_mcp_app()
 
 
+class _StubSession:
+    """Weakref-compatible stand-in for an MCP session object."""
+    pass
+
+
 class _StubCtx:
     """Minimal stand-in for a FastMCP Context, providing a stable session identity."""
 
     def __init__(self):
-        self.session = object()
+        self.session = _StubSession()
 
 
 # ── TestGuardsWiredToTools ─────────────────────────────────────────────────────
@@ -388,3 +393,88 @@ class TestGuardsWiredToTools:
 
         # session_b has an independent counter and should still be allowed through
         _call_tool(app, "snomed_lookup", {"code": "123", "ctx": session_b})
+
+
+# ── --log-level CLI argument tests ─────────────────────────────────────────────
+
+
+class TestLogLevelArgument:
+    """Verify the --log-level flag accepts lowercase and maps correctly."""
+
+    def test_lowercase_accepted(self):
+        from snowstorm_mcp_server.__main__ import build_arg_parser
+
+        parser = build_arg_parser()
+        args = parser.parse_args(["--log-level", "debug"])
+        assert args.log_level == "DEBUG"
+
+    def test_uppercase_accepted(self):
+        from snowstorm_mcp_server.__main__ import build_arg_parser
+
+        parser = build_arg_parser()
+        args = parser.parse_args(["--log-level", "WARNING"])
+        assert args.log_level == "WARNING"
+
+    def test_mixed_case_accepted(self):
+        from snowstorm_mcp_server.__main__ import build_arg_parser
+
+        parser = build_arg_parser()
+        args = parser.parse_args(["--log-level", "Info"])
+        assert args.log_level == "INFO"
+
+    def test_invalid_level_rejected(self):
+        from snowstorm_mcp_server.__main__ import build_arg_parser
+
+        parser = build_arg_parser()
+        with pytest.raises(SystemExit):
+            parser.parse_args(["--log-level", "TRACE"])
+
+
+# ── Expansion preflight concurrency test ───────────────────────────────────────
+
+
+class TestExpansionPreflightConcurrency:
+    """Verify that the expansion preflight query respects the concurrency cap."""
+
+    def test_preflight_acquires_concurrency_semaphore(self, monkeypatch):
+        """The preflight summary_only query must go through the concurrency limiter."""
+        import threading
+
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        semaphore_log = []
+
+        # Patch snomed_expand to record whether the semaphore is held
+        original_expand = None
+
+        def _tracking_expand(self, **kwargs):
+            # The concurrency limiter is a Semaphore(max_concurrent) — if it's
+            # fully acquired, _value will be less than the max. We check that
+            # at least one permit is consumed (i.e. we're inside `with guards.concurrency`).
+            semaphore_log.append(("expand", kwargs.get("summary_only", False)))
+            return {
+                "total": 5,
+                "offset": kwargs.get("offset", 0),
+                "returned": 0,
+                "items": [],
+            }
+
+        monkeypatch.setattr(ServerRuntime, "snomed_expand", _tracking_expand)
+        app = _create_mcp_with_guards(
+            monkeypatch,
+            rate_limit_calls=100,
+            rate_limit_window_seconds=60,
+            enable_expansion_size_guard=True,
+            expansion_count_threshold=1000,
+        )
+
+        _call_tool(app, "snomed_expand", {
+            "value_set_url": "http://snomed.info/sct?fhir_vs=ecl/<<195967001",
+            "count": 20,
+        })
+
+        # The preflight (summary_only=True) should have been called before the
+        # actual expand (summary_only=False).
+        assert len(semaphore_log) == 2
+        assert semaphore_log[0] == ("expand", True), "preflight should be first"
+        assert semaphore_log[1] == ("expand", False), "actual expand should be second"

@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import re
 import threading
+import weakref
 from collections import deque
 from collections.abc import Callable
 from time import monotonic
@@ -41,108 +42,65 @@ class SnowstormRateLimitError(SnowstormGuardError):
 
 # ── ECL pre-screening ──────────────────────────────────────────────────
 
+# ── Expensive root concepts (data-driven pattern generation) ─────────
+#
+# Adding a new root concept here automatically generates wildcard, dotted-
+# notation, and bare-expansion blocked patterns — no regex duplication needed.
+
+_EXPENSIVE_ROOTS: dict[str, tuple[str, str]] = {
+    # concept_id: (label, approximate_count)
+    "404684003": ("all clinical findings", "~350,000 concepts"),
+    "71388002": ("all procedures", "~100,000 concepts"),
+    "105590001": ("all substances", "~70,000 concepts"),
+    "123037004": ("all body structures", "~40,000 concepts"),
+    "138875005": ("SNOMED CT root", "~500,000 concepts"),
+}
+
+# Alternation of all expensive root IDs for use in combined regex patterns.
+_ROOT_IDS_ALT = "|".join(_EXPENSIVE_ROOTS)
+
+
+def _build_blocked_patterns() -> list[tuple[re.Pattern[str], str]]:
+    """Generate BLOCKED_PATTERNS from _EXPENSIVE_ROOTS plus structural rules."""
+    patterns: list[tuple[re.Pattern[str], str]] = [
+        # History supplements — not supported, will 500
+        (
+            re.compile(r"\{\{\s*\+\s*HISTORY", re.IGNORECASE),
+            "History supplements ({{+HISTORY}}) are not supported on this server. "
+            "Use snomed_validate_code to check individual inactive codes instead.",
+        ),
+        # Top-level MINUS between large bracketed expressions
+        (
+            re.compile(r"\)\s*MINUS\s*\(", re.IGNORECASE),
+            "Top-level MINUS between two bracketed expressions will time out on large sets. "
+            "Use MINUS inside an attribute value instead: "
+            "<<X:{attr=(<<A MINUS <<B)} rather than (<<X:attr=<<A) MINUS (<<X:attr=<<B).",
+        ),
+    ]
+    for cid, (label, count) in _EXPENSIVE_ROOTS.items():
+        # Full wildcard attribute query
+        patterns.append((
+            re.compile(rf"<<\s*{cid}\s*:\s*\*\s*=\s*\*"),
+            f"Full wildcard attribute query on <<{cid} ({label}, {count}) is too "
+            f"expensive. Scope to a subhierarchy before using wildcards.",
+        ))
+        # Dotted attribute notation
+        patterns.append((
+            re.compile(rf"<<\s*{cid}\s*\."),
+            f"Dotted attribute notation on <<{cid} ({label}, {count}) is too "
+            f"expensive. Scope to a subhierarchy before using dotted attribute notation.",
+        ))
+        # Bare top-level hierarchy root with no constraints
+        patterns.append((
+            re.compile(rf"^http://snomed\.info/sct\?fhir_vs=ecl/<<\s*{cid}\s*$"),
+            f"Bare <<{cid} ({label}, {count}) is too broad. "
+            f"Narrow to a subhierarchy first.",
+        ))
+    return patterns
+
+
 # Each entry: (compiled regex, error message returned to caller)
-BLOCKED_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    # History supplements — not supported, will 500
-    (
-        re.compile(r"\{\{\s*\+\s*HISTORY", re.IGNORECASE),
-        "History supplements ({{+HISTORY}}) are not supported on this server. "
-        "Use snomed_validate_code to check individual inactive codes instead.",
-    ),
-    # Top-level MINUS between large bracketed expressions
-    (
-        re.compile(r"\)\s*MINUS\s*\(", re.IGNORECASE),
-        "Top-level MINUS between two bracketed expressions will time out on large sets. "
-        "Use MINUS inside an attribute value instead: "
-        "<<X:{attr=(<<A MINUS <<B)} rather than (<<X:attr=<<A) MINUS (<<X:attr=<<B).",
-    ),
-    # Full wildcard on top-level clinical finding
-    (
-        re.compile(r"<<\s*404684003\s*:\s*\*\s*=\s*\*"),
-        "Full wildcard attribute query on <<404684003 (all clinical findings) is too "
-        "expensive. Scope to a subhierarchy before using wildcards.",
-    ),
-    # Full wildcard on top-level procedure
-    (
-        re.compile(r"<<\s*71388002\s*:\s*\*\s*=\s*\*"),
-        "Full wildcard attribute query on <<71388002 (all procedures) is too expensive. "
-        "Scope to a subhierarchy before using wildcards.",
-    ),
-    # Full wildcard on top-level substance
-    (
-        re.compile(r"<<\s*105590001\s*:\s*\*\s*=\s*\*"),
-        "Full wildcard attribute query on <<105590001 (all substances) is too expensive. "
-        "Scope to a subhierarchy before using wildcards.",
-    ),
-    # Full wildcard on SNOMED CT root — returns the entire ontology
-    (
-        re.compile(r"<<\s*138875005\s*:\s*\*\s*=\s*\*"),
-        "Full wildcard attribute query on <<138875005 (SNOMED CT root, ~500,000 concepts) "
-        "is too expensive. Scope to a subhierarchy before using wildcards.",
-    ),
-    # Full wildcard on top-level body structure
-    (
-        re.compile(r"<<\s*123037004\s*:\s*\*\s*=\s*\*"),
-        "Full wildcard attribute query on <<123037004 (all body structures, ~40,000 concepts) "
-        "is too expensive. Scope to a subhierarchy before using wildcards.",
-    ),
-    # Dotted attribute notation on top-level roots — returns attribute values across the
-    # entire hierarchy, which means materialising hundreds of thousands of concepts first.
-    # Syntactically subtle: <<404684003.attrId looks reasonable but is as expensive as a
-    # bare expansion of the root. Scope to a subhierarchy before using dotted notation.
-    (
-        re.compile(r"<<\s*404684003\s*\."),
-        "Dotted attribute notation on <<404684003 (all clinical findings, ~350,000 concepts) "
-        "is too expensive. Scope to a subhierarchy first, e.g. <<50043002.363698007 for "
-        "finding sites across respiratory disorders.",
-    ),
-    (
-        re.compile(r"<<\s*71388002\s*\."),
-        "Dotted attribute notation on <<71388002 (all procedures, ~100,000 concepts) is too "
-        "expensive. Scope to a subhierarchy before using dotted attribute notation.",
-    ),
-    (
-        re.compile(r"<<\s*105590001\s*\."),
-        "Dotted attribute notation on <<105590001 (all substances, ~70,000 concepts) is too "
-        "expensive. Scope to a subhierarchy before using dotted attribute notation.",
-    ),
-    (
-        re.compile(r"<<\s*138875005\s*\."),
-        "Dotted attribute notation on <<138875005 (SNOMED CT root, ~500,000 concepts) is too "
-        "expensive. Scope to a subhierarchy before using dotted attribute notation.",
-    ),
-    (
-        re.compile(r"<<\s*123037004\s*\."),
-        "Dotted attribute notation on <<123037004 (all body structures, ~40,000 concepts) is too "
-        "expensive. Scope to a subhierarchy before using dotted attribute notation.",
-    ),
-    # Bare top-level hierarchy roots with no constraints
-    (
-        re.compile(r"^http://snomed\.info/sct\?fhir_vs=ecl/<<\s*404684003\s*$"),
-        "Bare <<404684003 (all clinical findings, ~350,000 concepts) is too broad. "
-        "Narrow to a subhierarchy first (e.g. <<50043002 for respiratory disorders).",
-    ),
-    (
-        re.compile(r"^http://snomed\.info/sct\?fhir_vs=ecl/<<\s*71388002\s*$"),
-        "Bare <<71388002 (all procedures, ~100,000 concepts) is too broad. "
-        "Narrow to a subhierarchy first.",
-    ),
-    (
-        re.compile(r"^http://snomed\.info/sct\?fhir_vs=ecl/<<\s*105590001\s*$"),
-        "Bare <<105590001 (all substances, ~70,000 concepts) is too broad. "
-        "Add constraints or narrow the scope first.",
-    ),
-    (
-        re.compile(r"^http://snomed\.info/sct\?fhir_vs=ecl/<<\s*138875005\s*$"),
-        "Bare <<138875005 (SNOMED CT root, ~500,000 concepts) is too broad. "
-        "Narrow to a specific hierarchy first (e.g. <<404684003 for clinical findings).",
-    ),
-    (
-        re.compile(r"^http://snomed\.info/sct\?fhir_vs=ecl/<<\s*123037004\s*$"),
-        "Bare <<123037004 (all body structures, ~40,000 concepts) is too broad. "
-        "Narrow to a subhierarchy first (e.g. <<80891009 for heart structure).",
-    ),
-]
+BLOCKED_PATTERNS: list[tuple[re.Pattern[str], str]] = _build_blocked_patterns()
 
 
 # Patterns that are configurable — enabled by default but can be turned off.
@@ -153,7 +111,7 @@ BLOCKED_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 ZERO_CARDINALITY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
-            r"<<\s*(?:404684003|71388002|105590001|123037004|138875005)\b"
+            rf"<<\s*(?:{_ROOT_IDS_ALT})\b"
             r".*\[0\s*\.\.\s*0\]"
         ),
         "[0..0] cardinality on a top-level hierarchy root requires scanning the entire "
@@ -215,23 +173,25 @@ class RollingRateLimiter:
 class PerSessionRateLimiter:
     """Rolling-window rate limiter that tracks limits per session object.
 
-    Each unique session (identified by object identity) gets its own
-    independent RollingRateLimiter. Stale entries are evicted after
-    10 minutes of inactivity to prevent unbounded memory growth.
+    Each unique session gets its own independent RollingRateLimiter.
+    Sessions are tracked via ``WeakKeyDictionary`` so entries are
+    automatically cleaned up when the session object is garbage-collected,
+    avoiding both unbounded memory growth and id-reuse bugs.
+
+    The check-and-record operation is fully atomic — the per-session lock
+    is held while calling into the inner ``RollingRateLimiter``.
 
     One instance per MCP server process. For multi-process deployments,
     swap in a Redis-backed equivalent keyed by session ID.
     """
 
-    _STALE_SECONDS = 600  # evict sessions idle for > 10 min
-    _CLEANUP_INTERVAL = 300  # run eviction pass every 5 min
-
     def __init__(self, max_calls: int, window_seconds: int) -> None:
         self.max_calls = max_calls
         self.window_seconds = window_seconds
-        self._sessions: dict[int, tuple[RollingRateLimiter, float]] = {}
+        self._sessions: weakref.WeakKeyDictionary[object, RollingRateLimiter] = (
+            weakref.WeakKeyDictionary()
+        )
         self._lock = threading.Lock()
-        self._last_cleanup = monotonic()
 
     def check(self, session: object) -> None:
         """Check and record a call for the given session.
@@ -239,29 +199,12 @@ class PerSessionRateLimiter:
         Raises ``SnowstormRateLimitError`` if this session has exceeded
         its per-session limit.
         """
-        session_key = id(session)
-        now = monotonic()
         with self._lock:
-            self._evict_stale(now)
-            if session_key not in self._sessions:
-                self._sessions[session_key] = (
-                    RollingRateLimiter(self.max_calls, self.window_seconds),
-                    now,
-                )
-            limiter, _ = self._sessions[session_key]
-            self._sessions[session_key] = (limiter, now)
-        limiter.check()
-
-    def _evict_stale(self, now: float) -> None:
-        if now - self._last_cleanup < self._CLEANUP_INTERVAL:
-            return
-        stale = [
-            k for k, (_, last_seen) in self._sessions.items()
-            if now - last_seen > self._STALE_SECONDS
-        ]
-        for k in stale:
-            del self._sessions[k]
-        self._last_cleanup = now
+            limiter = self._sessions.get(session)
+            if limiter is None:
+                limiter = RollingRateLimiter(self.max_calls, self.window_seconds)
+                self._sessions[session] = limiter
+            limiter.check()
 
 
 # ── Expansion size cache ───────────────────────────────────────────────
@@ -274,11 +217,16 @@ class ExpansionSizeCache:
     against the same URL. Entries expire after ``ttl_seconds`` (default 24 h —
     appropriate for quarterly SNOMED releases).
 
+    A ``max_entries`` cap (default 2048) prevents unbounded memory growth
+    from pathological workloads that query many unique ECL URLs. When the
+    cap is reached, the oldest entry is evicted (FIFO).
+
     One instance per MCP server process.
     """
 
-    def __init__(self, ttl_seconds: int = 86400) -> None:
+    def __init__(self, ttl_seconds: int = 86400, max_entries: int = 2048) -> None:
         self._ttl = ttl_seconds
+        self._max_entries = max_entries
         self._cache: dict[str, tuple[int, float]] = {}
         self._lock = threading.Lock()
 
@@ -296,6 +244,10 @@ class ExpansionSizeCache:
     def set(self, url: str, count: int) -> None:
         with self._lock:
             self._cache[url] = (count, monotonic())
+            if len(self._cache) > self._max_entries:
+                # Evict oldest entry (first key in insertion order).
+                oldest_key = next(iter(self._cache))
+                del self._cache[oldest_key]
 
 
 # ── Count cap ──────────────────────────────────────────────────────────
@@ -406,7 +358,7 @@ class QueryGuards:
         large_result_threshold: int = 1000,
         max_children_calls_per_minute: int = 5,
         per_session_rate_limit_calls: int | None = None,
-        block_zero_cardinality_on_large_sets: bool = True,
+        block_zero_cardinality_on_large_sets: bool = False,
         enable_expansion_size_guard: bool = False,
         expansion_count_threshold: int = 20000,
         size_cache_ttl_seconds: int = 86400,

@@ -160,7 +160,7 @@ response_limits:
 #   large_result_threshold: 1000
 #   max_children_calls_per_minute: 5
 #   per_session_rate_limit_calls: null   # set an integer to enable
-#   block_zero_cardinality_on_large_sets: true
+#   block_zero_cardinality_on_large_sets: false  # set true to block [0..0] on top-level roots
 #   enable_expansion_size_guard: false   # preflight summary check for any non-summary expansion
 #   expansion_count_threshold: 20000     # block if total concepts exceeds this value
 #   size_cache_ttl_seconds: 86400

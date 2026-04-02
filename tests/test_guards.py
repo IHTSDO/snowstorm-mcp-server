@@ -23,6 +23,11 @@ from snowstorm_mcp_server.guards import (
 )
 
 
+class _Session:
+    """Minimal weakref-compatible stand-in for an MCP session."""
+    pass
+
+
 # ── pre_screen_ecl ─────────────────────────────────────────────────────
 
 
@@ -147,6 +152,39 @@ class TestPreScreenEcl:
             pre_screen_ecl(url)
 
 
+# ── Parameterized coverage for all expensive roots ────────────────────
+
+from snowstorm_mcp_server.guards import _EXPENSIVE_ROOTS
+
+
+class TestAllExpensiveRootsCoverage:
+    """Ensure every root in _EXPENSIVE_ROOTS is blocked for all pattern types."""
+
+    @pytest.mark.parametrize("concept_id", _EXPENSIVE_ROOTS.keys())
+    def test_wildcard_blocked(self, concept_id):
+        url = f"http://snomed.info/sct?fhir_vs=ecl/<<{concept_id}:*=*"
+        with pytest.raises(SnowstormGuardError, match="wildcard"):
+            pre_screen_ecl(url)
+
+    @pytest.mark.parametrize("concept_id", _EXPENSIVE_ROOTS.keys())
+    def test_dotted_notation_blocked(self, concept_id):
+        url = f"http://snomed.info/sct?fhir_vs=ecl/<<{concept_id}.363698007"
+        with pytest.raises(SnowstormGuardError, match="Dotted attribute notation"):
+            pre_screen_ecl(url)
+
+    @pytest.mark.parametrize("concept_id", _EXPENSIVE_ROOTS.keys())
+    def test_bare_expansion_blocked(self, concept_id):
+        url = f"http://snomed.info/sct?fhir_vs=ecl/<<{concept_id}"
+        with pytest.raises(SnowstormGuardError, match="too broad"):
+            pre_screen_ecl(url)
+
+    @pytest.mark.parametrize("concept_id", _EXPENSIVE_ROOTS.keys())
+    def test_scoped_subhierarchy_allowed(self, concept_id):
+        """Constrained queries on expensive roots must still be allowed."""
+        url = f"http://snomed.info/sct?fhir_vs=ecl/<<{concept_id}:363698007=<<80891009"
+        pre_screen_ecl(url)
+
+
 # ── ExpansionSizeCache ─────────────────────────────────────────────────
 
 
@@ -173,6 +211,15 @@ class TestExpansionSizeCache:
         cache = ExpansionSizeCache()
         cache.set("http://snomed.info/sct?fhir_vs=ecl/<<195967001", 10)
         assert cache.get("http://snomed.info/sct?fhir_vs=ecl/<<50043002") is None
+
+    def test_max_entries_evicts_oldest(self):
+        cache = ExpansionSizeCache(max_entries=2)
+        cache.set("url-a", 1)
+        cache.set("url-b", 2)
+        cache.set("url-c", 3)  # should evict url-a
+        assert cache.get("url-a") is None
+        assert cache.get("url-b") == 2
+        assert cache.get("url-c") == 3
 
 
 # ── ZERO_CARDINALITY_PATTERNS ──────────────────────────────────────────
@@ -346,44 +393,40 @@ class TestConcurrencyLimiter:
 class TestPerSessionRateLimiter:
     def test_different_sessions_are_independent(self):
         limiter = PerSessionRateLimiter(max_calls=1, window_seconds=60)
-        session_a = object()
-        session_b = object()
+        session_a = _Session()
+        session_b = _Session()
         limiter.check(session_a)
         # session_b has its own counter — should not be blocked
         limiter.check(session_b)
 
     def test_same_session_shares_limit(self):
         limiter = PerSessionRateLimiter(max_calls=1, window_seconds=60)
-        session = object()
+        session = _Session()
         limiter.check(session)
         with pytest.raises(SnowstormRateLimitError):
             limiter.check(session)
 
     def test_one_session_blocked_does_not_affect_another(self):
         limiter = PerSessionRateLimiter(max_calls=1, window_seconds=60)
-        session_a = object()
-        session_b = object()
+        session_a = _Session()
+        session_b = _Session()
         limiter.check(session_a)
         with pytest.raises(SnowstormRateLimitError):
             limiter.check(session_a)
         # session_b is unaffected
         limiter.check(session_b)
 
-    def test_stale_eviction_removes_old_entries(self):
+    def test_gc_cleans_up_session_entries(self):
+        """When a session is garbage-collected, its entry is removed from the limiter."""
+        import gc
+
         limiter = PerSessionRateLimiter(max_calls=1, window_seconds=60)
-        session = object()
+        session = _Session()
         limiter.check(session)
-        # Backdate last_cleanup and mark entry as stale
-        limiter._last_cleanup = monotonic() - limiter._CLEANUP_INTERVAL - 1
-        session_key = id(session)
-        limiter._sessions[session_key] = (
-            limiter._sessions[session_key][0],
-            monotonic() - limiter._STALE_SECONDS - 1,
-        )
-        # Trigger eviction via a new session check
-        new_session = object()
-        limiter.check(new_session)
-        assert session_key not in limiter._sessions
+        assert len(limiter._sessions) == 1
+        del session
+        gc.collect()
+        assert len(limiter._sessions) == 0
 
 
 # ── QueryGuards orchestrator ───────────────────────────────────────────
@@ -436,8 +479,8 @@ class TestQueryGuards:
             rate_limit_calls=100,
             per_session_rate_limit_calls=2,
         )
-        session_a = object()
-        session_b = object()
+        session_a = _Session()
+        session_b = _Session()
         g.pre_lookup(session_a)
         g.pre_lookup(session_a)
         with pytest.raises(SnowstormRateLimitError):
@@ -447,34 +490,34 @@ class TestQueryGuards:
 
     def test_per_session_disabled_by_default(self):
         g = QueryGuards(rate_limit_calls=100)
-        session = object()
+        session = _Session()
         # Should not raise regardless of call count from same session
         for _ in range(20):
             g.pre_lookup(session)
 
     def test_per_session_applies_to_expand(self):
         g = QueryGuards(rate_limit_calls=100, per_session_rate_limit_calls=1)
-        session = object()
+        session = _Session()
         g.pre_expand(None, 20, session)
         with pytest.raises(SnowstormRateLimitError):
             g.pre_expand(None, 20, session)
 
-    def test_zero_cardinality_blocked_by_default(self):
-        g = QueryGuards()
+    def test_zero_cardinality_blocked_when_enabled(self):
+        g = QueryGuards(block_zero_cardinality_on_large_sets=True)
         url = "http://snomed.info/sct?fhir_vs=ecl/<<404684003:[0..0]363698007=*"
         with pytest.raises(SnowstormGuardError, match=r"\[E_QUERY_BLOCKED\]"):
             g.pre_expand(url, 20)
 
-    def test_zero_cardinality_allowed_when_disabled(self):
-        g = QueryGuards(block_zero_cardinality_on_large_sets=False)
+    def test_zero_cardinality_allowed_by_default(self):
+        g = QueryGuards()
         # pre_expand will still try to call the rate limiter; patch it to isolate the flag
         g._rate_limiter.check = lambda: None  # type: ignore[method-assign]
         url = "http://snomed.info/sct?fhir_vs=ecl/<<404684003:[0..0]363698007=*"
-        # Should not raise — zero-cardinality guard is off
+        # Should not raise — zero-cardinality guard is off by default
         g.pre_expand(url, 20)
 
     def test_zero_cardinality_on_scoped_subhierarchy_always_allowed(self):
-        g = QueryGuards()
+        g = QueryGuards(block_zero_cardinality_on_large_sets=True)
         g._rate_limiter.check = lambda: None  # type: ignore[method-assign]
         url = "http://snomed.info/sct?fhir_vs=ecl/<<50043002:[0..0]363698007=*"
         g.pre_expand(url, 20)
@@ -536,7 +579,7 @@ class TestQueryGuards:
             max_children_calls_per_minute=100,
             per_session_rate_limit_calls=1,
         )
-        session = object()
+        session = _Session()
         g.pre_hierarchy("123", session)
         with pytest.raises(SnowstormRateLimitError):
             g.pre_hierarchy("456", session)

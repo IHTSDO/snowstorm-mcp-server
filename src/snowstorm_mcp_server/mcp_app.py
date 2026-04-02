@@ -48,11 +48,13 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     )
     g = app_config.guards
     logger.info(
-        "Guards active — rate_limit=%d/%ds  concurrency=%d  count_cap=%d  "
-        "per_session=%s  zero_cardinality_block=%s  "
-        "expansion_size_guard=%s (threshold=%d)",
+        "Guards active — rate_limit=%d/%ds, concurrency=%d, count_cap=%d",
         g.rate_limit_calls, g.rate_limit_window_seconds,
         g.max_concurrent_requests, g.max_count_per_call,
+    )
+    logger.info(
+        "Guards active — per_session=%s, zero_cardinality_block=%s, "
+        "expansion_size_guard=%s (threshold=%d)",
         g.per_session_rate_limit_calls,
         g.block_zero_cardinality_on_large_sets,
         g.enable_expansion_size_guard, g.expansion_count_threshold,
@@ -450,19 +452,20 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         # first so novel large hierarchies are caught without a hardcoded allowlist.
         # The result is cached by URL so repeated calls pay no extra backend cost.
         # summary_only calls are exempt — the user is already doing the right thing.
+        # The preflight query itself must respect the concurrency cap.
         if value_set_url and not summary_only:
-            guards.expansion_preflight(
-                value_set_url,
-                fetch_total=lambda: _tool_guard(
-                    lambda: runtime.snomed_expand(
-                        terminology=terminology,
-                        target=target,
-                        value_set_url=value_set_url,
-                        summary_only=True,
-                        count=1,
-                    )
-                ).get("total", 0),
-            )
+            def _fetch_total() -> int:
+                with guards.concurrency:
+                    return _tool_guard(
+                        lambda: runtime.snomed_expand(
+                            terminology=terminology,
+                            target=target,
+                            value_set_url=value_set_url,
+                            summary_only=True,
+                            count=1,
+                        )
+                    ).get("total", 0)
+            guards.expansion_preflight(value_set_url, fetch_total=_fetch_total)
         with guards.concurrency:
             result = _tool_guard(
                 lambda: runtime.snomed_expand(
