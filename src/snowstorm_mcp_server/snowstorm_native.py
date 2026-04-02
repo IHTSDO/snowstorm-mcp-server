@@ -128,8 +128,10 @@ class SnowstormNativeService:
         }
         data = self.client.request("GET", url, params=params, expect_json=True)
         items = data.get("items", [])
-        query_norm = _normalize_query(term)
-        scored_hits: list[tuple[tuple[int, int, int], ConceptSearchHit]] = []
+        # Snowstorm returns description-level results ranked by Elasticsearch.
+        # We deduplicate by concept (keeping the first/highest-ranked occurrence)
+        # and trust the server's relevance ordering.
+        hits: list[ConceptSearchHit] = []
         seen: set[str] = set()
         for item in items:
             if not isinstance(item, dict):
@@ -147,7 +149,7 @@ class SnowstormNativeService:
                 continue
             pt = (concept.get("pt") or {}).get("term") if isinstance(concept.get("pt"), dict) else None
             fsn = (concept.get("fsn") or {}).get("term") if isinstance(concept.get("fsn"), dict) else None
-            hit = ConceptSearchHit(
+            hits.append(ConceptSearchHit(
                 concept_id=concept_id,
                 pt=pt if isinstance(pt, str) else None,
                 fsn=fsn if isinstance(fsn, str) else None,
@@ -160,13 +162,10 @@ class SnowstormNativeService:
                 ),
                 module_id=concept.get("moduleId") if isinstance(concept.get("moduleId"), str) else None,
                 semantic_tag=_semantic_tag_from_fsn(fsn if isinstance(fsn, str) else None),
-            )
-            scored_hits.append((_search_score(query_norm, hit), hit))
+            ))
             seen.add(concept_id)
-            if len(scored_hits) >= raw_limit:
+            if len(hits) >= limit:
                 break
-        scored_hits.sort(key=lambda x: x[0], reverse=True)
-        hits = [hit for _, hit in scored_hits[:limit]]
         total_elements = data.get("totalElements")
         return ConceptSearchResult(
             term=term,
@@ -308,37 +307,10 @@ def _semantic_tag_from_fsn(fsn: str | None) -> str | None:
     return fsn.rsplit("(", 1)[-1][:-1]
 
 
-def _normalize_query(text: str | None) -> str:
-    if not text:
-        return ""
-    return " ".join(text.casefold().split())
-
-
 def _searchable_term_length(text: str | None) -> int:
     if not text:
         return 0
     return len(re.sub(r"[^0-9a-z]+", "", text.casefold()))
-
-
-def _text_without_semantic_tag(text: str | None) -> str:
-    if not text:
-        return ""
-    out = text.casefold().strip()
-    if out.endswith(")") and "(" in out:
-        out = out.rsplit("(", 1)[0].strip()
-    return " ".join(out.split())
-
-
-def _search_score(query_norm: str, hit: ConceptSearchHit) -> tuple[int, int, int]:
-    pt = _normalize_query(hit.pt)
-    matched = _normalize_query(hit.matched_term)
-    fsn_core = _text_without_semantic_tag(hit.fsn)
-    texts = [pt, matched, fsn_core]
-    exact = any(query_norm and query_norm == t for t in texts)
-    prefix = any(query_norm and t.startswith(query_norm) for t in texts if t)
-    contains = any(query_norm and query_norm in t for t in texts)
-    short_bonus = max(0, 200 - len(matched)) if matched else 0
-    return (int(exact) * 1000 + int(prefix) * 500 + int(contains) * 200, int(hit.active is True), short_bonus)
 
 
 def _first_non_empty_str(*values: Any) -> str | None:
