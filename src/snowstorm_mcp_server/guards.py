@@ -19,7 +19,7 @@ import re
 import threading
 import weakref
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Hashable
 from time import monotonic
 from typing import Any
 
@@ -211,11 +211,11 @@ class PerSessionRateLimiter:
 
 
 class ExpansionSizeCache:
-    """TTL cache mapping a value_set_url to its total concept count.
+    """TTL cache mapping an expansion query signature to its total concept count.
 
-    Used by the expansion threshold guard to skip repeated preflight queries
-    against the same URL. Entries expire after ``ttl_seconds`` (default 24 h —
-    appropriate for quarterly SNOMED releases).
+    Used by the expansion threshold guard to skip repeated preflight queries for
+    the same expansion parameters. Entries expire after ``ttl_seconds`` (default
+    24 h — appropriate for quarterly SNOMED releases).
 
     A ``max_entries`` cap (default 2048) prevents unbounded memory growth
     from pathological workloads that query many unique ECL URLs. When the
@@ -227,23 +227,23 @@ class ExpansionSizeCache:
     def __init__(self, ttl_seconds: int = 86400, max_entries: int = 2048) -> None:
         self._ttl = ttl_seconds
         self._max_entries = max_entries
-        self._cache: dict[str, tuple[int, float]] = {}
+        self._cache: dict[Hashable, tuple[int, float]] = {}
         self._lock = threading.Lock()
 
-    def get(self, url: str) -> int | None:
+    def get(self, key: Hashable) -> int | None:
         with self._lock:
-            entry = self._cache.get(url)
+            entry = self._cache.get(key)
             if entry is None:
                 return None
             count, timestamp = entry
             if monotonic() - timestamp > self._ttl:
-                del self._cache[url]
+                del self._cache[key]
                 return None
             return count
 
-    def set(self, url: str, count: int) -> None:
+    def set(self, key: Hashable, count: int) -> None:
         with self._lock:
-            self._cache[url] = (count, monotonic())
+            self._cache[key] = (count, monotonic())
             if len(self._cache) > self._max_entries:
                 # Evict oldest entry (first key in insertion order).
                 oldest_key = next(iter(self._cache))
@@ -384,6 +384,10 @@ class QueryGuards:
             else None
         )
 
+    def _consume_request_budget(self, session: object | None = None) -> None:
+        self._rate_limiter.check()
+        self._check_per_session(session)
+
     def _check_per_session(self, session: object | None) -> None:
         if session is not None and self._per_session_limiter is not None:
             self._per_session_limiter.check(session)
@@ -399,8 +403,7 @@ class QueryGuards:
         if value_set_url:
             pre_screen_ecl(value_set_url)
             self._check_extra_ecl_patterns(value_set_url)
-        self._rate_limiter.check()
-        self._check_per_session(session)
+        self._consume_request_budget(session)
         return safe_count(count, self.max_count_per_call)
 
     def post_expand(
@@ -417,35 +420,36 @@ class QueryGuards:
     def pre_hierarchy(self, concept_id: str, session: object | None = None) -> None:
         """Run pre-call guards for hierarchy tools (children/ancestors/descendants)."""
         self._children_tracker.check(concept_id)
-        self._rate_limiter.check()
-        self._check_per_session(session)
+        self._consume_request_budget(session)
 
     def pre_lookup(self, session: object | None = None) -> None:
         """Run pre-call guards for single-concept lookup and search tools."""
-        self._rate_limiter.check()
-        self._check_per_session(session)
+        self._consume_request_budget(session)
 
     def expansion_preflight(
         self,
-        value_set_url: str,
+        cache_key: Hashable,
         fetch_total: Callable[[], int],
+        session: object | None = None,
     ) -> None:
         """Check expansion size against the configured threshold.
 
         ``fetch_total`` is called only on a cache miss — it should perform a
         lightweight ``summary_only=True`` query and return the total concept count.
-        Results are cached by URL so repeated calls to the same expression pay no
-        extra backend cost.
+        Results are cached by expansion query signature so repeated calls to the
+        same expression on the same target with the same filters pay no extra
+        backend cost.
 
         No-op when ``expansion_count_threshold`` is not configured.
         Raises ``SnowstormGuardError`` when the total exceeds the threshold.
         """
         if self._expansion_threshold is None or self._size_cache is None:
             return
-        total = self._size_cache.get(value_set_url)
+        total = self._size_cache.get(cache_key)
         if total is None:
+            self._consume_request_budget(session)
             total = fetch_total()
-            self._size_cache.set(value_set_url, total)
+            self._size_cache.set(cache_key, total)
         if total > self._expansion_threshold:
             raise SnowstormGuardError(
                 f"[E_QUERY_BLOCKED] This expansion contains {total:,} concepts, "

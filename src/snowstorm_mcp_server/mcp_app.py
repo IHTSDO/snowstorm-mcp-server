@@ -167,8 +167,11 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     def server_health(
         terminology: str | None = None,
         target: str | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        return _tool_guard(lambda: runtime.server_health(terminology, target=target))
+        guards.pre_lookup(ctx.session if ctx is not None else None)
+        with guards.concurrency:
+            return _tool_guard(lambda: runtime.server_health(terminology, target=target))
 
     @mcp.tool(
         description=(
@@ -181,8 +184,11 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     def server_capabilities(
         terminology: str | None = None,
         target: str | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        return _tool_guard(lambda: runtime.server_capabilities(terminology, target=target))
+        guards.pre_lookup(ctx.session if ctx is not None else None)
+        with guards.concurrency:
+            return _tool_guard(lambda: runtime.server_capabilities(terminology, target=target))
 
     @mcp.tool(
         description=(
@@ -197,10 +203,13 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         terminology: str | None = None,
         target: str | None = None,
         include_raw: bool = True,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        return _tool_guard(
-            lambda: runtime.fhir_metadata(terminology, target=target, include_raw=include_raw)
-        )
+        guards.pre_lookup(ctx.session if ctx is not None else None)
+        with guards.concurrency:
+            return _tool_guard(
+                lambda: runtime.fhir_metadata(terminology, target=target, include_raw=include_raw)
+            )
 
     @mcp.tool(
         description=(
@@ -447,13 +456,26 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         fuzzy: bool = False,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        capped_count = guards.pre_expand(value_set_url, count, ctx.session if ctx is not None else None)
+        session = ctx.session if ctx is not None else None
+        capped_count = guards.pre_expand(value_set_url, count, session)
         # Threshold preflight: for non-summary calls, check the total concept count
         # first so novel large hierarchies are caught without a hardcoded allowlist.
         # The result is cached by URL so repeated calls pay no extra backend cost.
         # summary_only calls are exempt — the user is already doing the right thing.
         # The preflight query itself must respect the concurrency cap.
         if value_set_url and not summary_only:
+            cache_key = json.dumps(
+                {
+                    "terminology": terminology,
+                    "target": target,
+                    "value_set_url": value_set_url,
+                    "filter": filter,
+                    "fuzzy": fuzzy,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+
             def _fetch_total() -> int:
                 with guards.concurrency:
                     return _tool_guard(
@@ -461,11 +483,14 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                             terminology=terminology,
                             target=target,
                             value_set_url=value_set_url,
+                            filter=filter,
                             summary_only=True,
                             count=1,
+                            fuzzy=fuzzy,
                         )
                     ).get("total", 0)
-            guards.expansion_preflight(value_set_url, fetch_total=_fetch_total)
+
+            guards.expansion_preflight(cache_key, fetch_total=_fetch_total, session=session)
         with guards.concurrency:
             result = _tool_guard(
                 lambda: runtime.snomed_expand(

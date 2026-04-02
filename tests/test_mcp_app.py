@@ -372,6 +372,40 @@ class TestGuardsWiredToTools:
         result = _call_tool(app, "list_terminologies", {})
         assert "terminologies" in result
 
+    def test_server_health_is_rate_limited(self, monkeypatch):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        monkeypatch.setattr(ServerRuntime, "server_health", lambda self, *_a, **_kw: {"reachable": True})
+        app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
+
+        _call_tool(app, "server_health", {})
+        with pytest.raises(SnowstormRateLimitError):
+            _call_tool(app, "server_health", {})
+
+    def test_server_capabilities_is_rate_limited(self, monkeypatch):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        monkeypatch.setattr(
+            ServerRuntime,
+            "server_capabilities",
+            lambda self, *_a, **_kw: {"reachable": True, "capabilities": {}},
+        )
+        app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
+
+        _call_tool(app, "server_capabilities", {})
+        with pytest.raises(SnowstormRateLimitError):
+            _call_tool(app, "server_capabilities", {})
+
+    def test_fhir_metadata_is_rate_limited(self, monkeypatch):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        monkeypatch.setattr(ServerRuntime, "fhir_metadata", lambda self, *_a, **_kw: {"summary": {}})
+        app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
+
+        _call_tool(app, "fhir_metadata", {})
+        with pytest.raises(SnowstormRateLimitError):
+            _call_tool(app, "fhir_metadata", {})
+
     def test_per_session_limit_blocks_heavy_session_not_others(self, monkeypatch):
         """One session hitting its per-session limit must not affect a different session."""
         from snowstorm_mcp_server.runtime import ServerRuntime
@@ -478,3 +512,143 @@ class TestExpansionPreflightConcurrency:
         assert len(semaphore_log) == 2
         assert semaphore_log[0] == ("expand", True), "preflight should be first"
         assert semaphore_log[1] == ("expand", False), "actual expand should be second"
+
+    def test_preflight_uses_filter_and_fuzzy_when_calculating_total(self, monkeypatch):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        calls = []
+
+        def _tracking_expand(self, **kwargs):
+            calls.append(kwargs.copy())
+            total = 5 if kwargs.get("filter") == "asthma" and kwargs.get("fuzzy") else 5000
+            return {
+                "total": total,
+                "offset": kwargs.get("offset", 0),
+                "returned": 0,
+                "items": [],
+            }
+
+        monkeypatch.setattr(ServerRuntime, "snomed_expand", _tracking_expand)
+        app = _create_mcp_with_guards(
+            monkeypatch,
+            rate_limit_calls=100,
+            rate_limit_window_seconds=60,
+            enable_expansion_size_guard=True,
+            expansion_count_threshold=1000,
+        )
+
+        _call_tool(app, "snomed_expand", {
+            "value_set_url": "http://snomed.info/sct?fhir_vs=ecl/<<195967001",
+            "filter": "asthma",
+            "fuzzy": True,
+        })
+
+        assert len(calls) == 2
+        assert calls[0]["summary_only"] is True
+        assert calls[0]["filter"] == "asthma"
+        assert calls[0]["fuzzy"] is True
+
+    def test_preflight_cache_is_scoped_by_target(self, monkeypatch):
+        from snowstorm_mcp_server.capabilities import BackendType, Capabilities, TargetStatus
+        from snowstorm_mcp_server.config import AppConfig, GuardConfig, TargetConfig
+        from snowstorm_mcp_server.runtime import ServerRuntime
+        from snowstorm_mcp_server.terminology import TerminologyInfo, TerminologyRegistry
+
+        target_a = TargetConfig(base_url="http://a.test")
+        target_b = TargetConfig(base_url="http://b.test")
+        stub_config = AppConfig(
+            default_terminology="a",
+            targets={"a-target": target_a, "b-target": target_b},
+            guards=GuardConfig(
+                rate_limit_calls=100,
+                enable_expansion_size_guard=True,
+                expansion_count_threshold=1000,
+            ),
+        )
+
+        def _fake_build_registry(_cfg):
+            registry = TerminologyRegistry()
+            for name, target_name, target in (
+                ("a", "a-target", target_a),
+                ("b", "b-target", target_b),
+            ):
+                registry.register(
+                    TerminologyInfo(
+                        name=name,
+                        target_name=target_name,
+                        backend_type=BackendType.SNOWSTORM,
+                        branch_path="MAIN",
+                    ),
+                    target,
+                )
+                registry.set_target_status(
+                    target_name,
+                    TargetStatus(
+                        reachable=True,
+                        base_url=target.base_url,
+                        fhir_base_url=f"{target.base_url}/fhir",
+                        capabilities=Capabilities(
+                            backend_type=BackendType.SNOWSTORM,
+                            has_fhir=True,
+                            has_native_api=True,
+                        ),
+                    ),
+                )
+            registry.set_default("a")
+            return registry
+
+        from snowstorm_mcp_server import mcp_app as mcp_app_module
+        from snowstorm_mcp_server import runtime as runtime_module
+
+        monkeypatch.setattr(mcp_app_module, "load_config", lambda _path=None: stub_config)
+        monkeypatch.setattr(runtime_module, "build_registry", _fake_build_registry)
+
+        calls = []
+
+        def _tracking_expand(self, **kwargs):
+            calls.append(kwargs.copy())
+            total = 50_000 if kwargs.get("target") == "a-target" else 10
+            return {
+                "total": total,
+                "offset": kwargs.get("offset", 0),
+                "returned": 0,
+                "items": [],
+            }
+
+        monkeypatch.setattr(ServerRuntime, "snomed_expand", _tracking_expand)
+        app = create_mcp_app()
+
+        with pytest.raises(Exception, match="50,000 concepts"):
+            _call_tool(app, "snomed_expand", {
+                "value_set_url": "http://snomed.info/sct?fhir_vs=ecl/<<195967001",
+                "target": "a-target",
+            })
+
+        result = _call_tool(app, "snomed_expand", {
+            "value_set_url": "http://snomed.info/sct?fhir_vs=ecl/<<195967001",
+            "target": "b-target",
+        })
+
+        assert result["total"] == 10
+        assert len(calls) == 3
+
+    def test_preflight_cache_miss_counts_against_rate_limit(self, monkeypatch):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        monkeypatch.setattr(ServerRuntime, "snomed_expand", lambda self, **kwargs: {
+            "total": 5,
+            "offset": kwargs.get("offset", 0),
+            "returned": 0,
+            "items": [],
+        })
+        app = _create_mcp_with_guards(
+            monkeypatch,
+            rate_limit_calls=2,
+            rate_limit_window_seconds=60,
+            enable_expansion_size_guard=True,
+            expansion_count_threshold=1000,
+        )
+
+        _call_tool(app, "snomed_expand", {"value_set_url": "http://snomed.info/sct?fhir_vs=ecl/<<195967001"})
+        with pytest.raises(SnowstormRateLimitError):
+            _call_tool(app, "snomed_expand", {"value_set_url": "http://snomed.info/sct?fhir_vs=ecl/<<50043002"})

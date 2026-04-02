@@ -343,7 +343,8 @@ Release tagging/smoke steps are in `docs/release-v0.1-checklist.md`.
 
 All tools that make backend HTTP calls share a common set of guards to protect
 the Snowstorm instance from overload. These apply regardless of which tool is
-called — `snomed_expand`, `snomed_lookup`, `snomed_validate_code`, `snomed_subsumes`,
+called — `server_health`, `server_capabilities`, `fhir_metadata`,
+`snomed_expand`, `snomed_lookup`, `snomed_validate_code`, `snomed_subsumes`,
 all hierarchy tools, and all `snowstorm_*` native tools.
 
 Guards that are always active:
@@ -376,8 +377,8 @@ guards:
 
 When `per_session_rate_limit_calls` is set, each MCP session gets its own
 independent rolling window using the same `rate_limit_window_seconds`. Sessions
-are tracked by object identity and evicted automatically after 10 minutes of
-inactivity.
+are tracked by object identity and are dropped automatically when the underlying
+session object is garbage-collected.
 
 This limits the blast radius of a single heavy user but does not prevent
 abuse via repeated reconnects. For that, add IP-based rate limiting at your
@@ -385,9 +386,8 @@ reverse proxy (Nginx `limit_req`, Caddy `rate_limit`, Cloudflare, etc.).
 
 ### Unguarded tools
 
-Lightweight tools that do not call the Snowstorm backend are intentionally
-left unguarded: `list_terminologies`, `server_health`, `server_capabilities`,
-and `fhir_metadata`.
+In-memory tools that do not call the Snowstorm backend are intentionally left
+unguarded: `list_terminologies`.
 
 ## Snowstorm native search constraint (important)
 

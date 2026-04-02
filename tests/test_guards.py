@@ -474,6 +474,26 @@ class TestQueryGuards:
         with pytest.raises(SnowstormRateLimitError):
             g.pre_lookup()
 
+    def test_expansion_preflight_consumes_budget_on_cache_miss(self):
+        g = QueryGuards(
+            rate_limit_calls=2,
+            rate_limit_window_seconds=60,
+            enable_expansion_size_guard=True,
+        )
+        g.pre_expand("http://snomed.info/sct?fhir_vs=ecl/<<195967001", 20)
+        g.expansion_preflight("query-a", fetch_total=lambda: 5)
+        with pytest.raises(SnowstormRateLimitError):
+            g.pre_expand("http://snomed.info/sct?fhir_vs=ecl/<<50043002", 20)
+
+    def test_expansion_preflight_cache_hit_does_not_consume_budget(self):
+        g = QueryGuards(
+            rate_limit_calls=2,
+            rate_limit_window_seconds=60,
+            enable_expansion_size_guard=True,
+        )
+        g.expansion_preflight("query-a", fetch_total=lambda: 5)
+        g.expansion_preflight("query-a", fetch_total=lambda: 999)
+
     def test_per_session_blocks_heavy_session_not_others(self):
         g = QueryGuards(
             rate_limit_calls=100,
@@ -501,6 +521,18 @@ class TestQueryGuards:
         g.pre_expand(None, 20, session)
         with pytest.raises(SnowstormRateLimitError):
             g.pre_expand(None, 20, session)
+
+    def test_expansion_preflight_applies_per_session_limit(self):
+        g = QueryGuards(
+            rate_limit_calls=100,
+            per_session_rate_limit_calls=2,
+            enable_expansion_size_guard=True,
+        )
+        session = _Session()
+        g.pre_expand("http://snomed.info/sct?fhir_vs=ecl/<<195967001", 20, session)
+        g.expansion_preflight("query-a", fetch_total=lambda: 5, session=session)
+        with pytest.raises(SnowstormRateLimitError):
+            g.pre_lookup(session)
 
     def test_zero_cardinality_blocked_when_enabled(self):
         g = QueryGuards(block_zero_cardinality_on_large_sets=True)
