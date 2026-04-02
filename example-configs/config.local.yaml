@@ -8,6 +8,23 @@ server_mode: "snowstorm"
 # (lowercased shortName, e.g. "snomedct", "snomedct-us").
 default_terminology: snomedct
 
+# Performance guards — only non-default values are shown below.
+# Omit the block entirely to use all defaults. For public-facing deployments,
+# set per_session_rate_limit_calls to prevent one session from exhausting the
+# global budget. See README for the full list of options and guidance.
+# guards:
+#   rate_limit_calls: 10
+#   rate_limit_window_seconds: 60
+#   max_concurrent_requests: 3
+#   max_count_per_call: 500
+#   large_result_threshold: 1000
+#   max_children_calls_per_minute: 5
+#   per_session_rate_limit_calls: null  # set an integer to enable per-session limiting
+#   block_zero_cardinality_on_large_sets: true  # blocks [0..0] cardinality on top-level roots
+#   enable_expansion_size_guard: false  # preflight summary check for any non-summary expansion
+#   expansion_count_threshold: 20000    # block if total concepts exceeds this value
+#   size_cache_ttl_seconds: 86400       # how long to cache expansion counts (default: 24 h)
+
 targets:
   # Snowstorm (full) -- terminologies auto-discovered from /codesystems.
   snowstorm:

@@ -19,6 +19,22 @@ response_limits:
   max_search_hits: 50
   max_synonyms: 25
 
+# Performance guards — tightened for a public-facing deployment.
+# Also configure IP-based rate limiting at your reverse proxy to guard
+# against abuse that bypasses per-session limits (e.g. repeated reconnects).
+guards:
+  rate_limit_calls: 30           # global ceiling across all sessions per process
+  rate_limit_window_seconds: 60
+  max_concurrent_requests: 5
+  max_count_per_call: 200        # tighter cap on public instance to reduce load
+  large_result_threshold: 500
+  max_children_calls_per_minute: 5
+  per_session_rate_limit_calls: 8 # prevent one session exhausting the global budget
+  block_zero_cardinality_on_large_sets: true
+  enable_expansion_size_guard: true   # preflight any non-summary expansion
+  expansion_count_threshold: 20000    # block if total concepts exceeds this value
+  size_cache_ttl_seconds: 86400       # cache counts for 24 h (SNOMED releases are quarterly)
+
 targets:
   public-snowstorm:
     base_url: "https://browser.ihtsdotools.org/snowstorm/snomed-ct"

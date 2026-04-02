@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 from mcp.types import ToolAnnotations
 
 from .config import load_config
@@ -40,6 +40,22 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         max_count_per_call=app_config.guards.max_count_per_call,
         large_result_threshold=app_config.guards.large_result_threshold,
         max_children_calls_per_minute=app_config.guards.max_children_calls_per_minute,
+        per_session_rate_limit_calls=app_config.guards.per_session_rate_limit_calls,
+        block_zero_cardinality_on_large_sets=app_config.guards.block_zero_cardinality_on_large_sets,
+        enable_expansion_size_guard=app_config.guards.enable_expansion_size_guard,
+        expansion_count_threshold=app_config.guards.expansion_count_threshold,
+        size_cache_ttl_seconds=app_config.guards.size_cache_ttl_seconds,
+    )
+    g = app_config.guards
+    logger.info(
+        "Guards active — rate_limit=%d/%ds  concurrency=%d  count_cap=%d  "
+        "per_session=%s  zero_cardinality_block=%s  "
+        "expansion_size_guard=%s (threshold=%d)",
+        g.rate_limit_calls, g.rate_limit_window_seconds,
+        g.max_concurrent_requests, g.max_count_per_call,
+        g.per_session_rate_limit_calls,
+        g.block_zero_cardinality_on_large_sets,
+        g.enable_expansion_size_guard, g.expansion_count_threshold,
     )
 
     _ecl_guidance = (
@@ -207,16 +223,19 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         target: str | None = None,
         system: str = "http://snomed.info/sct",
         version: str | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        return _tool_guard(
-            lambda: runtime.snomed_lookup(
-                terminology=terminology,
-                target=target,
-                code=code,
-                system=system,
-                version=version,
+        guards.pre_lookup(ctx.session if ctx is not None else None)
+        with guards.concurrency:
+            return _tool_guard(
+                lambda: runtime.snomed_lookup(
+                    terminology=terminology,
+                    target=target,
+                    code=code,
+                    system=system,
+                    version=version,
+                )
             )
-        )
 
     @mcp.tool(
         description=(
@@ -239,16 +258,19 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         target: str | None = None,
         system: str = "http://snomed.info/sct",
         version: str | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        return _tool_guard(
-            lambda: runtime.snomed_validate_code(
-                terminology=terminology,
-                target=target,
-                code=code,
-                system=system,
-                version=version,
+        guards.pre_lookup(ctx.session if ctx is not None else None)
+        with guards.concurrency:
+            return _tool_guard(
+                lambda: runtime.snomed_validate_code(
+                    terminology=terminology,
+                    target=target,
+                    code=code,
+                    system=system,
+                    version=version,
+                )
             )
-        )
 
     @mcp.tool(
         description=(
@@ -265,17 +287,20 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         target: str | None = None,
         system: str = "http://snomed.info/sct",
         version: str | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        return _tool_guard(
-            lambda: runtime.snomed_subsumes(
-                terminology=terminology,
-                target=target,
-                code_a=code_a,
-                code_b=code_b,
-                system=system,
-                version=version,
+        guards.pre_lookup(ctx.session if ctx is not None else None)
+        with guards.concurrency:
+            return _tool_guard(
+                lambda: runtime.snomed_subsumes(
+                    terminology=terminology,
+                    target=target,
+                    code_a=code_a,
+                    code_b=code_b,
+                    system=system,
+                    version=version,
+                )
             )
-        )
 
     @mcp.tool(
         description=(
@@ -418,8 +443,26 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         summary_only: bool = False,
         max_contains: int = 100,
         fuzzy: bool = False,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        capped_count = guards.pre_expand(value_set_url, count)
+        capped_count = guards.pre_expand(value_set_url, count, ctx.session if ctx is not None else None)
+        # Threshold preflight: for non-summary calls, check the total concept count
+        # first so novel large hierarchies are caught without a hardcoded allowlist.
+        # The result is cached by URL so repeated calls pay no extra backend cost.
+        # summary_only calls are exempt — the user is already doing the right thing.
+        if value_set_url and not summary_only:
+            guards.expansion_preflight(
+                value_set_url,
+                fetch_total=lambda: _tool_guard(
+                    lambda: runtime.snomed_expand(
+                        terminology=terminology,
+                        target=target,
+                        value_set_url=value_set_url,
+                        summary_only=True,
+                        count=1,
+                    )
+                ).get("total", 0),
+            )
         with guards.concurrency:
             result = _tool_guard(
                 lambda: runtime.snomed_expand(
@@ -453,8 +496,9 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         direct_only: bool = False,
         offset: int = 0,
         count: int = 50,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        guards.pre_hierarchy(concept_id)
+        guards.pre_hierarchy(concept_id, ctx.session if ctx is not None else None)
         ecl_operator = ">!" if direct_only else ">"
         ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/{ecl_operator} {concept_id}"
         with guards.concurrency:
@@ -489,8 +533,9 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         target: str | None = None,
         offset: int = 0,
         count: int = 50,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        guards.pre_hierarchy(concept_id)
+        guards.pre_hierarchy(concept_id, ctx.session if ctx is not None else None)
         ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/<! {concept_id}"
         with guards.concurrency:
             return _tool_guard(
@@ -520,8 +565,9 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         target: str | None = None,
         offset: int = 0,
         count: int = 50,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        guards.pre_hierarchy(concept_id)
+        guards.pre_hierarchy(concept_id, ctx.session if ctx is not None else None)
         ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/< {concept_id}"
         with guards.concurrency:
             return _tool_guard(
@@ -548,10 +594,13 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         def snowstorm_list_codesystems(
             terminology: str | None = None,
             target: str | None = None,
+            ctx: Context | None = None,
         ) -> dict[str, Any]:
-            return _tool_guard(
-                lambda: runtime.snowstorm_list_codesystems(terminology=terminology, target=target)
-            )
+            guards.pre_lookup(ctx.session if ctx is not None else None)
+            with guards.concurrency:
+                return _tool_guard(
+                    lambda: runtime.snowstorm_list_codesystems(terminology=terminology, target=target)
+                )
 
         @mcp.tool(
             description=(
@@ -565,14 +614,17 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             code_system_short_name: str,
             terminology: str | None = None,
             target: str | None = None,
+            ctx: Context | None = None,
         ) -> dict[str, Any]:
-            return _tool_guard(
-                lambda: runtime.snowstorm_list_versions(
-                    terminology=terminology,
-                    target=target,
-                    code_system_short_name=code_system_short_name,
+            guards.pre_lookup(ctx.session if ctx is not None else None)
+            with guards.concurrency:
+                return _tool_guard(
+                    lambda: runtime.snowstorm_list_versions(
+                        terminology=terminology,
+                        target=target,
+                        code_system_short_name=code_system_short_name,
+                    )
                 )
-            )
 
         @mcp.tool(
             description=(
@@ -590,16 +642,19 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             target: str | None = None,
             limit: int = 10,
             active_only: bool = True,
+            ctx: Context | None = None,
         ) -> dict[str, Any]:
-            return _tool_guard(
-                lambda: runtime.snowstorm_search_concepts(
-                    terminology=terminology,
-                    target=target,
-                    term=term,
-                    limit=limit,
-                    active_only=active_only,
+            guards.pre_lookup(ctx.session if ctx is not None else None)
+            with guards.concurrency:
+                return _tool_guard(
+                    lambda: runtime.snowstorm_search_concepts(
+                        terminology=terminology,
+                        target=target,
+                        term=term,
+                        limit=limit,
+                        active_only=active_only,
+                    )
                 )
-            )
 
         @mcp.tool(
             description=(
@@ -615,16 +670,19 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             target: str | None = None,
             include_synonyms: bool = True,
             max_synonyms: int = 15,
+            ctx: Context | None = None,
         ) -> dict[str, Any]:
-            return _tool_guard(
-                lambda: runtime.snowstorm_get_concept_native(
-                    terminology=terminology,
-                    target=target,
-                    concept_id=concept_id,
-                    include_synonyms=include_synonyms,
-                    max_synonyms=max_synonyms,
+            guards.pre_lookup(ctx.session if ctx is not None else None)
+            with guards.concurrency:
+                return _tool_guard(
+                    lambda: runtime.snowstorm_get_concept_native(
+                        terminology=terminology,
+                        target=target,
+                        concept_id=concept_id,
+                        include_synonyms=include_synonyms,
+                        max_synonyms=max_synonyms,
+                    )
                 )
-            )
 
     # --- Favicon for Anthropic Connector Directory listing ---------------
     _favicon_path = Path(__file__).resolve().parent / "static" / "favicon.svg"

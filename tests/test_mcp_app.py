@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+from snowstorm_mcp_server.guards import SnowstormRateLimitError
 from snowstorm_mcp_server.mcp_app import MAX_RESPONSE_CHARS, _truncate_response, create_mcp_app
 
 
@@ -246,3 +247,144 @@ class TestSnomedGetDescendants:
         _call_tool(mcp, "snomed_get_descendants", {"concept_id": "123", "offset": 20, "count": 100})
         assert _captured_expand["offset"] == 20
         assert _captured_expand["count"] == 100
+
+
+# ── Helpers for guard integration tests ───────────────────────────────────────
+
+
+def _create_mcp_with_guards(monkeypatch, **guard_kwargs):
+    """Create a snowstorm-mode MCP app with custom guard settings."""
+    from snowstorm_mcp_server.capabilities import BackendType, Capabilities, TargetStatus
+    from snowstorm_mcp_server.config import AppConfig, GuardConfig, TargetConfig
+    from snowstorm_mcp_server.terminology import TerminologyInfo, TerminologyRegistry
+
+    target = TargetConfig(base_url="http://stub.test")
+    stub_config = AppConfig(targets={"stub": target}, guards=GuardConfig(**guard_kwargs))
+
+    def _fake_build_registry(_cfg):
+        registry = TerminologyRegistry()
+        registry.register(
+            TerminologyInfo(
+                name="snomedct",
+                target_name="stub",
+                backend_type=BackendType.SNOWSTORM,
+                branch_path="MAIN",
+            ),
+            target,
+        )
+        registry.set_default("snomedct")
+        registry.set_target_status(
+            "stub",
+            TargetStatus(
+                reachable=True,
+                base_url="http://stub.test",
+                fhir_base_url="http://stub.test/fhir",
+                capabilities=Capabilities(
+                    backend_type=BackendType.SNOWSTORM,
+                    has_fhir=True,
+                    has_native_api=True,
+                ),
+            ),
+        )
+        return registry
+
+    from snowstorm_mcp_server import mcp_app as mcp_app_module
+    from snowstorm_mcp_server import runtime as runtime_module
+
+    monkeypatch.setattr(mcp_app_module, "load_config", lambda _path=None: stub_config)
+    monkeypatch.setattr(runtime_module, "build_registry", _fake_build_registry)
+    return create_mcp_app()
+
+
+class _StubCtx:
+    """Minimal stand-in for a FastMCP Context, providing a stable session identity."""
+
+    def __init__(self):
+        self.session = object()
+
+
+# ── TestGuardsWiredToTools ─────────────────────────────────────────────────────
+
+
+class TestGuardsWiredToTools:
+    """Verify that tool functions enforce rate limiting and per-session limits.
+
+    Each test creates an MCP app with a rate limit of 1 call per window so
+    that the first call succeeds and the second raises SnowstormRateLimitError.
+    Runtime methods are stubbed out to keep tests fast and self-contained.
+    """
+
+    def test_snomed_lookup_is_rate_limited(self, monkeypatch):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        monkeypatch.setattr(ServerRuntime, "snomed_lookup", lambda self, **_kw: {"code": "123"})
+        app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
+
+        _call_tool(app, "snomed_lookup", {"code": "123"})
+        with pytest.raises(SnowstormRateLimitError):
+            _call_tool(app, "snomed_lookup", {"code": "123"})
+
+    def test_snomed_validate_code_is_rate_limited(self, monkeypatch):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        monkeypatch.setattr(ServerRuntime, "snomed_validate_code", lambda self, **_kw: {"valid": True})
+        app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
+
+        _call_tool(app, "snomed_validate_code", {"code": "123"})
+        with pytest.raises(SnowstormRateLimitError):
+            _call_tool(app, "snomed_validate_code", {"code": "123"})
+
+    def test_snomed_subsumes_is_rate_limited(self, monkeypatch):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        monkeypatch.setattr(ServerRuntime, "snomed_subsumes", lambda self, **_kw: {"outcome": "subsumes"})
+        app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
+
+        _call_tool(app, "snomed_subsumes", {"code_a": "22298006", "code_b": "73211009"})
+        with pytest.raises(SnowstormRateLimitError):
+            _call_tool(app, "snomed_subsumes", {"code_a": "22298006", "code_b": "73211009"})
+
+    def test_snowstorm_search_is_rate_limited(self, monkeypatch):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        monkeypatch.setattr(ServerRuntime, "snowstorm_search_concepts", lambda self, **_kw: {"hits": []})
+        app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
+
+        _call_tool(app, "snowstorm_search_concepts", {"term": "asthma"})
+        with pytest.raises(SnowstormRateLimitError):
+            _call_tool(app, "snowstorm_search_concepts", {"term": "asthma"})
+
+    def test_list_terminologies_is_not_rate_limited(self, monkeypatch):
+        """list_terminologies is an in-memory call and must not be affected by low rate limits."""
+        app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
+
+        # Exhaust the global rate limit with a lookup call first
+        from snowstorm_mcp_server.runtime import ServerRuntime
+        monkeypatch.setattr(ServerRuntime, "snomed_lookup", lambda self, **_kw: {"code": "123"})
+        _call_tool(app, "snomed_lookup", {"code": "123"})
+
+        # list_terminologies should be unaffected — it never touches the rate limiter
+        result = _call_tool(app, "list_terminologies", {})
+        assert "terminologies" in result
+
+    def test_per_session_limit_blocks_heavy_session_not_others(self, monkeypatch):
+        """One session hitting its per-session limit must not affect a different session."""
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        monkeypatch.setattr(ServerRuntime, "snomed_lookup", lambda self, **_kw: {"code": "123"})
+        app = _create_mcp_with_guards(
+            monkeypatch,
+            rate_limit_calls=100,          # global limit well out of the way
+            rate_limit_window_seconds=60,
+            per_session_rate_limit_calls=1,
+        )
+
+        session_a = _StubCtx()
+        session_b = _StubCtx()
+
+        _call_tool(app, "snomed_lookup", {"code": "123", "ctx": session_a})
+        with pytest.raises(SnowstormRateLimitError):
+            _call_tool(app, "snomed_lookup", {"code": "123", "ctx": session_a})
+
+        # session_b has an independent counter and should still be allowed through
+        _call_tool(app, "snomed_lookup", {"code": "123", "ctx": session_b})
