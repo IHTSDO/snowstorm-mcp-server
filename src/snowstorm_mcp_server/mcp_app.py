@@ -313,8 +313,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                 )
             )
 
-    @mcp.tool(
-        description=(
+    _expand_description = (
             "Expand a SNOMED CT value set using FHIR ValueSet/$expand. The primary tool for "
             "retrieving concept sets via ECL (Expression Constraint Language) queries. "
             "Works on Snowstorm and Lite when FHIR is available.\n\n"
@@ -440,7 +439,18 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "    value_set_url='http://snomed.info/sct?fhir_vs=ecl/<<404684003:[0..0]363698007=*'\n"
             "  Reference set members:\n"
             "    value_set_url='http://snomed.info/sct?fhir_vs=ecl/^723264001'"
-        ),
+    )
+    if app_config.guards.enable_expansion_size_guard:
+        _expand_description += (
+            "\n\nRATE LIMIT NOTE: This server has an expansion size guard enabled. "
+            "Novel ECL queries (not previously cached) require a preflight check that "
+            "counts as an additional request against the rate limit. Use summary_only=true "
+            "to check totals without triggering the preflight, or narrow your ECL to stay "
+            "within the expansion threshold."
+        )
+
+    @mcp.tool(
+        description=_expand_description,
         annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
     )
