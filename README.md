@@ -16,7 +16,70 @@ Supports all SNOMED CT editions available on the connected backend (Internationa
 US, UK, AU, etc.). No user account is required when connected to a public
 Snowstorm instance.
 
-## Quick start (local dev)
+This repository supports two related but distinct usage modes:
+
+1. **Hosted remote connector**: run a public HTTPS MCP endpoint and connect Claude
+   to it via the custom connector / Connector Directory flow.
+2. **Self-hosted or local usage**: run the server yourself against your own
+   Snowstorm or Snowstorm Lite deployment, including Claude Desktop and future
+   MCPB packaging scenarios.
+
+If you are preparing a hosted connector for Claude web/desktop/mobile, start with
+[Hosted remote connector](#hosted-remote-connector). If you want to run the server
+yourself against your own terminology backend, start with
+[Self-hosted and local usage](#self-hosted-and-local-usage).
+
+## Hosted remote connector
+
+Use this mode when you are operating a public MCP endpoint, for example
+`https://your-domain.example/mcp`, and want Claude to connect to it from
+Anthropic's infrastructure.
+
+### Hosted deployment (Docker)
+
+Build and run the container:
+
+```bash
+docker build -t snowstorm-mcp-server .
+docker run -p 8000:8000 snowstorm-mcp-server
+```
+
+The server starts in Streamable HTTP mode on port 8000 using the
+bundled `config.docker-snowstorm.yaml` (expects a local Snowstorm at
+`http://localhost:8080`). Mount your own config at runtime:
+
+```bash
+docker run -p 8000:8000 \
+  -v /path/to/your/config.yaml:/app/config.yaml \
+  snowstorm-mcp-server
+```
+
+For production, deploy behind an HTTPS reverse proxy or on a platform
+with automatic TLS (Cloud Run, Fly.io, Railway, etc.). For public-facing
+deployments, configure rate limiting at both the reverse proxy (IP-based)
+and the application level (per-session) — see [Performance guards](#performance-guards) below.
+
+For remote MCP connector deployments intended for Claude web/desktop, the
+server enables CORS for `https://claude.ai` and `https://claude.com` on the
+Streamable HTTP endpoint by default. Override the allowed origin list with
+the `SNOWSTORM_MCP_CORS_ALLOW_ORIGINS` environment variable if needed
+using a comma-separated list.
+
+### Remote connector notes
+
+- Anthropic connects to your hosted MCP endpoint from its cloud infrastructure.
+- Anthropic does **not** configure your internal Snowstorm backend settings such
+  as `base_url`, `user_agent`, or target auth. Those stay in your server config.
+- `manifest.json` in this repo is for local packaging scenarios, not for the
+  hosted remote connector flow.
+
+## Self-hosted and local usage
+
+Use this mode when you want to run the MCP server yourself against your own
+Snowstorm or Snowstorm Lite backend, whether locally, on private infrastructure,
+or for Claude Desktop / MCPB-style packaging.
+
+## Development quick start
 
 ```bash
 uv venv
@@ -27,7 +90,7 @@ uv run pytest -q
 
 For unit vs integration test workflows (including Docker stack setup and RF2 import), see `docs/testing.md`.
 
-## Docker Integration Stack (Snowstorm + Lite)
+## Docker integration stack (Snowstorm + Lite)
 
 Start local containers for integration testing:
 
@@ -49,7 +112,7 @@ your `.env` to point at the relevant config, then:
 uv run pytest -q tests/integration
 ```
 
-## Running the server
+## Running the server locally
 
 The server reads its config from a YAML file (see `example-configs/config.local.yaml`).
 Create a `.env` file in the project root to set the config path and any secrets
@@ -104,31 +167,14 @@ uv run snowstorm-mcp-server --transport streamable-http
 > the `.env` file automatically. If you prefer explicit env vars, pass them via
 > the `"env"` key in the Claude Desktop config.
 
-## Hosted deployment (Docker)
+### Local packaging / MCPB installs
 
-Build and run the container pointing at the public SNOMED International Snowstorm instance:
+If you install the server from a Connector Directory entry, the manifest prompts
+for a config file path and passes it as `--config` at startup. Choose one of the
+YAML files in `example-configs/` for local development, or provide the path to
+your own Snowstorm/Snowstorm Lite deployment config.
 
-```bash
-docker build -t snowstorm-mcp-server .
-docker run -p 8000:8000 snowstorm-mcp-server
-```
-
-The server starts in Streamable HTTP mode on port 8000 using the
-bundled `config.docker-snowstorm.yaml` (expects a local Snowstorm at
-`http://localhost:8080`). Mount your own config at runtime:
-
-```bash
-docker run -p 8000:8000 \
-  -v /path/to/your/config.yaml:/app/config.yaml \
-  snowstorm-mcp-server
-```
-
-For production, deploy behind an HTTPS reverse proxy or on a platform
-with automatic TLS (Cloud Run, Fly.io, Railway, etc.). For public-facing
-deployments, configure rate limiting at both the reverse proxy (IP-based)
-and the application level (per-session) — see [Performance guards](#performance-guards) below.
-
-## Local config example
+## Configuration
 
 See `example-configs/config.local.yaml` (Snowstorm at `http://localhost:8080`).
 
@@ -324,6 +370,39 @@ Expected response shape:
 }
 ```
 
+### Usage examples
+
+These examples show how an AI assistant uses the server's tools in response
+to natural language questions.
+
+**Example 1 — Looking up a clinical concept**
+
+> **User:** "What is SNOMED CT concept 22298006?"
+
+The assistant calls `snomed_lookup` with `{"code": "22298006"}` and receives
+the concept's preferred term ("Myocardial infarction"), its SNOMED CT system
+URI, and any associated properties. The assistant can then explain the concept
+to the user in plain language, including its clinical meaning.
+
+**Example 2 — Checking a hierarchical relationship**
+
+> **User:** "Is type 2 diabetes mellitus a kind of endocrine disorder in SNOMED CT?"
+
+The assistant calls `snomed_subsumes` with
+`{"code_a": "362969004", "code_b": "44054006"}` (Endocrine disorder and
+Type 2 diabetes mellitus respectively). The response indicates whether
+code\_a subsumes code\_b, confirming or denying the IS-A relationship.
+
+**Example 3 — Finding concepts by clinical term**
+
+> **User:** "Find SNOMED CT concepts related to 'atrial fibrillation'."
+
+The assistant calls `snomed_expand` with
+`{"filter": "atrial fibrillation", "count": 10}` to search across the
+terminology. The response returns matching concepts with their IDs,
+preferred terms, and whether they are active, allowing the assistant to
+present a concise list of clinically relevant matches.
+
 ### FHIR operations and multi-edition Snowstorm
 
 For native Snowstorm operations (search, concept detail), the terminology's
@@ -401,7 +480,31 @@ Practical guidance:
 
 The MCP server validates this early and returns a clear error message before calling Snowstorm.
 
-## License and privacy
+## Privacy policy
+
+This server acts as a stateless proxy between an MCP client and a configured
+SNOMED CT backend (Snowstorm or Snowstorm Lite). It does not collect, store,
+or process personal data and does not send data to any third party beyond
+the configured backend. All query content is forwarded to the backend and
+discarded after the response is delivered. When per-session rate limiting is
+enabled, the server holds in-memory call timestamps per session purely for
+rate enforcement; this state contains no PII and is automatically discarded
+when the session ends.
+
+Responses contain SNOMED CT terminology content subject to
+[SNOMED International licensing terms](https://www.snomed.org/snomed-ct/get-snomed).
+When deployed as a hosted service, standard web server access logs (IP address,
+timestamp, request path) may be retained by the hosting infrastructure for
+operational purposes.
+
+For the full privacy policy, see [PRIVACY.md](PRIVACY.md).
+
+## Support
+
+- **Issues and bug reports:** [GitHub Issues](https://github.com/IHTSDO/snowstorm-mcp-server/issues)
+- **SNOMED CT licensing and content:** [SNOMED International](https://www.snomed.org)
+- **General enquiries:** [info@snomed.org](mailto:info@snomed.org)
+
+## License
 
 This project is licensed under [Apache 2.0](LICENSE).
-See [PRIVACY.md](PRIVACY.md) for the privacy policy.

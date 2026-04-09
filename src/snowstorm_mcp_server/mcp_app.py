@@ -142,6 +142,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     )
 
     @mcp.tool(
+        title="List Terminologies",
         description=(
             "List the SNOMED CT editions and branches available on the connected server. "
             "WHEN TO USE: before running edition-specific queries to confirm available terminology keys, "
@@ -157,6 +158,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         }
 
     @mcp.tool(
+        title="Server Health Check",
         description=(
             "Return reachability and basic backend capability flags. "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
@@ -174,6 +176,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             return _tool_guard(lambda: runtime.server_health(terminology, target=target))
 
     @mcp.tool(
+        title="Server Capabilities",
         description=(
             "Return backend classification and capabilities for a terminology. "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
@@ -191,6 +194,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             return _tool_guard(lambda: runtime.server_capabilities(terminology, target=target))
 
     @mcp.tool(
+        title="FHIR Capability Metadata",
         description=(
             "Return a parsed FHIR CapabilityStatement summary for a terminology's backend. "
             "Set include_raw=true (default) to also include the raw CapabilityStatement payload. "
@@ -212,6 +216,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             )
 
     @mcp.tool(
+        title="SNOMED Concept Lookup",
         description=(
             "Retrieve full concept details via FHIR CodeSystem/$lookup for a known SNOMED CT concept ID. "
             "Returns the FSN, synonyms, parent concepts, and all defining attributes with their values. "
@@ -249,6 +254,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             )
 
     @mcp.tool(
+        title="SNOMED Validate Code",
         description=(
             "Validate whether a SNOMED CT concept ID exists and is currently active via FHIR "
             "CodeSystem/$validate-code. Returns true/false with the display name if valid and active. "
@@ -284,6 +290,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             )
 
     @mcp.tool(
+        title="SNOMED Subsumption Test",
         description=(
             "FHIR CodeSystem/$subsumes for two SNOMED codes. "
             "Optionally specify terminology and/or target; defaults to the server's default terminology."
@@ -450,6 +457,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         )
 
     @mcp.tool(
+        title="SNOMED Expand Value Set",
         description=_expand_description,
         annotations=_READ_ONLY_ANNOTATIONS,
         structured_output=True,
@@ -518,6 +526,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         return guards.post_expand(result, capped_count, summary_only)
 
     @mcp.tool(
+        title="SNOMED Get Ancestors",
         description=(
             "Get ancestor concepts of a SNOMED concept (parents, grandparents, etc. via IS-A hierarchy). "
             "Traverses upward through IS-A to find the classification position of a concept. "
@@ -551,6 +560,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             )
 
     @mcp.tool(
+        title="SNOMED Get Children",
         description=(
             "Get direct IS-A children of a SNOMED concept (one level down in the hierarchy). "
             "More efficient than ECL for simple hierarchy browsing when you only need immediate children. "
@@ -587,6 +597,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             )
 
     @mcp.tool(
+        title="SNOMED Get Descendants",
         description=(
             "Get all descendant concepts of a SNOMED concept (children, grandchildren, etc. via IS-A hierarchy). "
             "Transitive closure downward, equivalent to <<X in ECL but returned as a hierarchy structure. "
@@ -622,6 +633,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     if server_mode == "snowstorm":
 
         @mcp.tool(
+            title="Snowstorm List Code Systems",
             description=(
                 "List Snowstorm code systems with summarized latest version info. "
                 "Optionally specify terminology and/or target; defaults to the server's default terminology."
@@ -641,6 +653,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                 )
 
         @mcp.tool(
+            title="Snowstorm List Code System Versions",
             description=(
                 "List versions for a Snowstorm code system short name. "
                 "Optionally specify terminology and/or target for routing; defaults to the server's default terminology."
@@ -665,6 +678,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                 )
 
         @mcp.tool(
+            title="Snowstorm Search Concepts",
             description=(
                 "Snowstorm-native concept search by term. "
                 "Optionally specify terminology and/or target; defaults to the server's default terminology. "
@@ -695,6 +709,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                 )
 
         @mcp.tool(
+            title="Snowstorm Get Concept Detail",
             description=(
                 "Snowstorm-native concept detail by conceptId. "
                 "Optionally specify terminology and/or target; defaults to the server's default terminology."
