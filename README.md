@@ -104,6 +104,13 @@ uv run snowstorm-mcp-server --transport streamable-http
 > the `.env` file automatically. If you prefer explicit env vars, pass them via
 > the `"env"` key in the Claude Desktop config.
 
+### Connector Directory installs
+
+If you install the server from a Connector Directory entry, the manifest prompts
+for a config file path and passes it as `--config` at startup. Choose one of the
+YAML files in `example-configs/` for local development, or provide the path to
+your own Snowstorm/Snowstorm Lite deployment config.
+
 ## Hosted deployment (Docker)
 
 Build and run the container pointing at the public SNOMED International Snowstorm instance:

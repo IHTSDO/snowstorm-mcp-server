@@ -10,21 +10,43 @@
   },
   "license": "Apache-2.0",
   "homepage": "https://www.snomed.org",
-  "repository": "https://github.com/IHTSDO/snowstorm-mcp-server",
+  "documentation": "https://github.com/IHTSDO/snowstorm-mcp-server/blob/main/README.md",
+  "support": "https://github.com/IHTSDO/snowstorm-mcp-server/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IHTSDO/snowstorm-mcp-server"
+  },
   "privacy_policies": ["https://github.com/IHTSDO/snowstorm-mcp-server/blob/main/PRIVACY.md"],
-  "terms_of_service": ["https://github.com/IHTSDO/snowstorm-mcp-server/blob/main/TERMS.md"],
+  "tools_generated": true,
+  "keywords": [
+    "snomed",
+    "snomed-ct",
+    "clinical-terminology",
+    "health-informatics",
+    "fhir",
+    "snowstorm"
+  ],
   "server": {
     "type": "python",
-    "entry_point": "snowstorm_mcp_server",
+    "entry_point": "src/snowstorm_mcp_server/__main__.py",
     "mcp_config": {
       "command": "uv",
       "args": [
         "run",
         "--project", "${__dirname}",
         "snowstorm-mcp-server",
+        "--config", "${user_config.config_path}",
         "--transport", "stdio"
       ],
       "env": {}
+    }
+  },
+  "user_config": {
+    "config_path": {
+      "type": "file",
+      "title": "Snowstorm MCP Config",
+      "description": "Path to the YAML or JSON config file for your Snowstorm or Snowstorm Lite deployment.",
+      "required": true
     }
   }
 }
