@@ -135,6 +135,12 @@ with automatic TLS (Cloud Run, Fly.io, Railway, etc.). For public-facing
 deployments, configure rate limiting at both the reverse proxy (IP-based)
 and the application level (per-session) — see [Performance guards](#performance-guards) below.
 
+For remote MCP connector deployments intended for Claude web/desktop, the
+server enables CORS for `https://claude.ai` and `https://claude.com` on the
+Streamable HTTP endpoint by default. Override the allowed origin list with
+the `SNOWSTORM_MCP_CORS_ALLOW_ORIGINS` environment variable if needed
+using a comma-separated list.
+
 ## Local config example
 
 See `example-configs/config.local.yaml` (Snowstorm at `http://localhost:8080`).
