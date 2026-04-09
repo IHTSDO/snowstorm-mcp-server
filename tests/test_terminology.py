@@ -393,8 +393,13 @@ def test_build_registry_fallback_on_discovery_failure(monkeypatch) -> None:
 
     registry = build_registry(config)
 
-    assert "mysnowstorm" in registry.list_terminology_names()
+    # Discovery failure must NOT silently register a terminology named after the
+    # target — that masks misconfiguration. The target should have zero
+    # terminologies and the error must be surfaced in discovery_errors.
+    assert registry.list_terminology_names() == []
+    assert "mysnowstorm" in registry.list_target_names()
     assert len(registry.discovery_errors) == 1
+    assert "boom" in registry.discovery_errors[0]
 
 
 def test_build_registry_default_terminology_graceful_on_discovery_failure(monkeypatch) -> None:
@@ -432,5 +437,6 @@ def test_build_registry_default_terminology_graceful_on_discovery_failure(monkey
     registry = build_registry(config)
 
     assert registry.default_terminology is None
-    assert "dev-snowstorm" in registry.list_terminology_names()
+    assert registry.list_terminology_names() == []
+    assert "dev-snowstorm" in registry.list_target_names()
     assert any("default_terminology" in e for e in registry.discovery_errors)

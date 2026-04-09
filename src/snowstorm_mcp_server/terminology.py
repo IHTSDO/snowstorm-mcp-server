@@ -236,16 +236,18 @@ def build_registry(config: AppConfig) -> TerminologyRegistry:
             try:
                 terminologies = discover_snowstorm_terminologies(target_name, target_cfg)
             except DiscoveryError as exc:
+                logger.error(
+                    "Terminology discovery failed for target '%s': %s. "
+                    "No terminologies will be registered for this target. "
+                    "Verify base_url and that GET {base_url}/codesystems is reachable.",
+                    target_name,
+                    exc,
+                )
                 registry.discovery_errors.append(str(exc))
-                terminologies = [
-                    TerminologyInfo(
-                        name=target_name.lower(),
-                        display_name=None,
-                        target_name=target_name,
-                        backend_type=BackendType.SNOWSTORM,
-                        branch_path="MAIN",
-                    )
-                ]
+                # Still record the target so tools can report on it, but do not
+                # invent a fake terminology that masks the misconfiguration.
+                registry._targets[target_name] = target_cfg
+                continue
             for info in terminologies:
                 registry.register(info, target_cfg)
 
