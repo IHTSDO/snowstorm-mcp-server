@@ -438,9 +438,12 @@ The MCP server validates this early and returns a clear error message before cal
 
 This server acts as a stateless proxy between an MCP client and a configured
 SNOMED CT backend (Snowstorm or Snowstorm Lite). It does not collect, store,
-or process personal data; does not track users or sessions; and does not send
-data to any third party beyond the configured backend. All query content is
-forwarded to the backend and discarded after the response is delivered.
+or process personal data and does not send data to any third party beyond
+the configured backend. All query content is forwarded to the backend and
+discarded after the response is delivered. When per-session rate limiting is
+enabled, the server holds in-memory call timestamps per session purely for
+rate enforcement; this state contains no PII and is automatically discarded
+when the session ends.
 
 Responses contain SNOMED CT terminology content subject to
 [SNOMED International licensing terms](https://www.snomed.org/snomed-ct/get-snomed).
