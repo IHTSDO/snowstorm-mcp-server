@@ -16,7 +16,70 @@ Supports all SNOMED CT editions available on the connected backend (Internationa
 US, UK, AU, etc.). No user account is required when connected to a public
 Snowstorm instance.
 
-## Quick start (local dev)
+This repository supports two related but distinct usage modes:
+
+1. **Hosted remote connector**: run a public HTTPS MCP endpoint and connect Claude
+   to it via the custom connector / Connector Directory flow.
+2. **Self-hosted or local usage**: run the server yourself against your own
+   Snowstorm or Snowstorm Lite deployment, including Claude Desktop and future
+   MCPB packaging scenarios.
+
+If you are preparing a hosted connector for Claude web/desktop/mobile, start with
+[Hosted remote connector](#hosted-remote-connector). If you want to run the server
+yourself against your own terminology backend, start with
+[Self-hosted and local usage](#self-hosted-and-local-usage).
+
+## Hosted remote connector
+
+Use this mode when you are operating a public MCP endpoint, for example
+`https://your-domain.example/mcp`, and want Claude to connect to it from
+Anthropic's infrastructure.
+
+### Hosted deployment (Docker)
+
+Build and run the container:
+
+```bash
+docker build -t snowstorm-mcp-server .
+docker run -p 8000:8000 snowstorm-mcp-server
+```
+
+The server starts in Streamable HTTP mode on port 8000 using the
+bundled `config.docker-snowstorm.yaml` (expects a local Snowstorm at
+`http://localhost:8080`). Mount your own config at runtime:
+
+```bash
+docker run -p 8000:8000 \
+  -v /path/to/your/config.yaml:/app/config.yaml \
+  snowstorm-mcp-server
+```
+
+For production, deploy behind an HTTPS reverse proxy or on a platform
+with automatic TLS (Cloud Run, Fly.io, Railway, etc.). For public-facing
+deployments, configure rate limiting at both the reverse proxy (IP-based)
+and the application level (per-session) — see [Performance guards](#performance-guards) below.
+
+For remote MCP connector deployments intended for Claude web/desktop, the
+server enables CORS for `https://claude.ai` and `https://claude.com` on the
+Streamable HTTP endpoint by default. Override the allowed origin list with
+the `SNOWSTORM_MCP_CORS_ALLOW_ORIGINS` environment variable if needed
+using a comma-separated list.
+
+### Remote connector notes
+
+- Anthropic connects to your hosted MCP endpoint from its cloud infrastructure.
+- Anthropic does **not** configure your internal Snowstorm backend settings such
+  as `base_url`, `user_agent`, or target auth. Those stay in your server config.
+- `manifest.json` in this repo is for local packaging scenarios, not for the
+  hosted remote connector flow.
+
+## Self-hosted and local usage
+
+Use this mode when you want to run the MCP server yourself against your own
+Snowstorm or Snowstorm Lite backend, whether locally, on private infrastructure,
+or for Claude Desktop / MCPB-style packaging.
+
+## Development quick start
 
 ```bash
 uv venv
@@ -27,7 +90,7 @@ uv run pytest -q
 
 For unit vs integration test workflows (including Docker stack setup and RF2 import), see `docs/testing.md`.
 
-## Docker Integration Stack (Snowstorm + Lite)
+## Docker integration stack (Snowstorm + Lite)
 
 Start local containers for integration testing:
 
@@ -49,7 +112,7 @@ your `.env` to point at the relevant config, then:
 uv run pytest -q tests/integration
 ```
 
-## Running the server
+## Running the server locally
 
 The server reads its config from a YAML file (see `example-configs/config.local.yaml`).
 Create a `.env` file in the project root to set the config path and any secrets
@@ -104,44 +167,14 @@ uv run snowstorm-mcp-server --transport streamable-http
 > the `.env` file automatically. If you prefer explicit env vars, pass them via
 > the `"env"` key in the Claude Desktop config.
 
-### Connector Directory installs
+### Local packaging / MCPB installs
 
 If you install the server from a Connector Directory entry, the manifest prompts
 for a config file path and passes it as `--config` at startup. Choose one of the
 YAML files in `example-configs/` for local development, or provide the path to
 your own Snowstorm/Snowstorm Lite deployment config.
 
-## Hosted deployment (Docker)
-
-Build and run the container pointing at the public SNOMED International Snowstorm instance:
-
-```bash
-docker build -t snowstorm-mcp-server .
-docker run -p 8000:8000 snowstorm-mcp-server
-```
-
-The server starts in Streamable HTTP mode on port 8000 using the
-bundled `config.docker-snowstorm.yaml` (expects a local Snowstorm at
-`http://localhost:8080`). Mount your own config at runtime:
-
-```bash
-docker run -p 8000:8000 \
-  -v /path/to/your/config.yaml:/app/config.yaml \
-  snowstorm-mcp-server
-```
-
-For production, deploy behind an HTTPS reverse proxy or on a platform
-with automatic TLS (Cloud Run, Fly.io, Railway, etc.). For public-facing
-deployments, configure rate limiting at both the reverse proxy (IP-based)
-and the application level (per-session) — see [Performance guards](#performance-guards) below.
-
-For remote MCP connector deployments intended for Claude web/desktop, the
-server enables CORS for `https://claude.ai` and `https://claude.com` on the
-Streamable HTTP endpoint by default. Override the allowed origin list with
-the `SNOWSTORM_MCP_CORS_ALLOW_ORIGINS` environment variable if needed
-using a comma-separated list.
-
-## Local config example
+## Configuration
 
 See `example-configs/config.local.yaml` (Snowstorm at `http://localhost:8080`).
 
@@ -447,7 +480,7 @@ Practical guidance:
 
 The MCP server validates this early and returns a clear error message before calling Snowstorm.
 
-## Privacy
+## Privacy policy
 
 This server acts as a stateless proxy between an MCP client and a configured
 SNOMED CT backend (Snowstorm or Snowstorm Lite). It does not collect, store,
