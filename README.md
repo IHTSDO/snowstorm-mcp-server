@@ -324,6 +324,39 @@ Expected response shape:
 }
 ```
 
+### Usage examples
+
+These examples show how an AI assistant uses the server's tools in response
+to natural language questions.
+
+**Example 1 — Looking up a clinical concept**
+
+> **User:** "What is SNOMED CT concept 22298006?"
+
+The assistant calls `snomed_lookup` with `{"code": "22298006"}` and receives
+the concept's preferred term ("Myocardial infarction"), its SNOMED CT system
+URI, and any associated properties. The assistant can then explain the concept
+to the user in plain language, including its clinical meaning.
+
+**Example 2 — Checking a hierarchical relationship**
+
+> **User:** "Is type 2 diabetes mellitus a kind of endocrine disorder in SNOMED CT?"
+
+The assistant calls `snomed_subsumes` with
+`{"code_a": "362969004", "code_b": "44054006"}` (Endocrine disorder and
+Type 2 diabetes mellitus respectively). The response indicates whether
+code\_a subsumes code\_b, confirming or denying the IS-A relationship.
+
+**Example 3 — Finding concepts by clinical term**
+
+> **User:** "Find SNOMED CT concepts related to 'atrial fibrillation'."
+
+The assistant calls `snomed_expand` with
+`{"filter": "atrial fibrillation", "count": 10}` to search across the
+terminology. The response returns matching concepts with their IDs,
+preferred terms, and whether they are active, allowing the assistant to
+present a concise list of clinically relevant matches.
+
 ### FHIR operations and multi-edition Snowstorm
 
 For native Snowstorm operations (search, concept detail), the terminology's
@@ -401,7 +434,28 @@ Practical guidance:
 
 The MCP server validates this early and returns a clear error message before calling Snowstorm.
 
-## License and privacy
+## Privacy
+
+This server acts as a stateless proxy between an MCP client and a configured
+SNOMED CT backend (Snowstorm or Snowstorm Lite). It does not collect, store,
+or process personal data; does not track users or sessions; and does not send
+data to any third party beyond the configured backend. All query content is
+forwarded to the backend and discarded after the response is delivered.
+
+Responses contain SNOMED CT terminology content subject to
+[SNOMED International licensing terms](https://www.snomed.org/snomed-ct/get-snomed).
+When deployed as a hosted service, standard web server access logs (IP address,
+timestamp, request path) may be retained by the hosting infrastructure for
+operational purposes.
+
+For the full privacy policy, see [PRIVACY.md](PRIVACY.md).
+
+## Support
+
+- **Issues and bug reports:** [GitHub Issues](https://github.com/IHTSDO/snowstorm-mcp-server/issues)
+- **SNOMED CT licensing and content:** [SNOMED International](https://www.snomed.org)
+- **General enquiries:** [info@snomed.org](mailto:info@snomed.org)
+
+## License
 
 This project is licensed under [Apache 2.0](LICENSE).
-See [PRIVACY.md](PRIVACY.md) for the privacy policy.

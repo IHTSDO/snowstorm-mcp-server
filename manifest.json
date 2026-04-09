@@ -1,20 +1,31 @@
 {
-  "manifest_version": "0.2",
+  "manifest_version": "0.3",
+  "name": "snowstorm-mcp-server",
+  "display_name": "SNOMED CT Terminology Server",
+  "version": "1.0.0",
+  "description": "Query SNOMED CT clinical terminology via Snowstorm and Snowstorm Lite backends. Supports lookup, search, validation, hierarchy navigation, and value set expansion across all SNOMED CT editions (International, US, UK, AU, etc.).",
+  "author": {
+    "name": "SNOMED International",
+    "url": "https://www.snomed.org"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://www.snomed.org",
+  "repository": "https://github.com/IHTSDO/snowstorm-mcp-server",
+  "privacy_policies": [
+    "https://github.com/IHTSDO/snowstorm-mcp-server/blob/main/PRIVACY.md"
+  ],
   "server": {
-    "name": "snowstorm-mcp-server",
-    "display_name": "SNOMED CT Terminology Server",
-    "description": "Query SNOMED CT clinical terminology — lookup, search, validation, hierarchy navigation, and value set expansion via Snowstorm and Snowstorm Lite backends. Supports all SNOMED CT editions (International, US, UK, AU, etc.).",
-    "version": "0.1.0",
-    "author": "SNOMED International",
-    "license": "Apache-2.0",
-    "homepage": "https://github.com/IHTSDO/snowstorm-mcp-server",
-    "repository": "https://github.com/IHTSDO/snowstorm-mcp-server",
-    "privacy_policies": ["https://github.com/IHTSDO/snowstorm-mcp-server/blob/main/PRIVACY.md"]
-  },
-  "transport": {
-    "type": "streamable-http"
-  },
-  "auth": {
-    "type": "none"
+    "type": "python",
+    "entry_point": "snowstorm_mcp_server",
+    "mcp_config": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--project", "${__dirname}",
+        "snowstorm-mcp-server",
+        "--transport", "stdio"
+      ],
+      "env": {}
+    }
   }
 }

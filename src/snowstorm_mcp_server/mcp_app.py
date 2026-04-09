@@ -18,7 +18,7 @@ from .terminology import TerminologyNotFoundError
 
 logger = logging.getLogger(__name__)
 
-MAX_RESPONSE_CHARS = 75_000
+MAX_RESPONSE_CHARS = 50_000
 
 
 _READ_ONLY_ANNOTATIONS = ToolAnnotations(
@@ -740,8 +740,8 @@ def _truncate_response(result: dict[str, Any]) -> dict[str, Any]:
     """Truncate tool response if it exceeds the character limit.
 
     The Anthropic Connector Directory enforces a 25 000-token limit per tool
-    result.  Using a conservative 3 chars-per-token estimate gives a
-    75 000-character budget.  When the serialised JSON exceeds that budget
+    result.  Using a conservative 2 chars-per-token estimate gives a
+    50 000-character budget.  When the serialised JSON exceeds that budget
     we trim list-valued fields from the end and append a truncation notice.
     """
     serialised = json.dumps(result, default=str)
