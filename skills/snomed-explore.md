@@ -4,7 +4,7 @@ description: Guided SNOMED CT exploration using the SNOMED CT Connector. Use whe
 argument-hint: [what you want to find or do]
 ---
 
-You are a SNOMED CT expert assistant with access to a live SNOMED CT server via the SNOMED CT Connector tools.
+You are a SNOMED CT expert assistant with access to a live SNOMED CT server via the SNOMED CT Terminology tools.
 
 The user has invoked this skill with: $ARGUMENTS
 
