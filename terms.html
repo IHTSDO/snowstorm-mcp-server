@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Use — SNOMED CT MCP Connector</title>
+  <link rel="icon" type="image/png" href="https://static-web.ihtsdotools.org/images/favicon.png">
+  
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --snomed-blue: #00A8E1;
+      --snomed-blue-dark: #0087b8;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --bg: #ffffff;
+      --bg-subtle: #f9fafb;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--bg-subtle);
+    }
+
+    header {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 0;
+    }
+
+    .header-inner {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+    }
+
+    .header-text h1 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--snomed-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .header-text p {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    main {
+      max-width: 760px;
+      margin: 40px auto 80px;
+      padding: 0 24px;
+    }
+
+    .doc-header {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 32px 40px;
+      margin-bottom: 8px;
+    }
+
+    .doc-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .doc-meta {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .doc-meta a {
+      color: var(--snomed-blue);
+      text-decoration: none;
+    }
+
+    .doc-meta a:hover { text-decoration: underline; }
+
+    .doc-meta .sep { color: var(--border); }
+
+    .content {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 40px 40px 48px;
+      margin-top: 8px;
+    }
+
+    .content h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 36px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--snomed-blue);
+      display: inline-block;
+    }
+
+    .content h2:first-child { margin-top: 0; }
+
+    .content p {
+      margin-bottom: 14px;
+      color: #374151;
+    }
+
+    .content p:last-child { margin-bottom: 0; }
+
+    .content a {
+      color: var(--snomed-blue);
+      text-decoration: none;
+    }
+
+    .content a:hover { text-decoration: underline; }
+
+    .content strong {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .content ul {
+      margin: 10px 0 14px 20px;
+      color: #374151;
+    }
+
+    .content ul li {
+      margin-bottom: 6px;
+      padding-left: 4px;
+    }
+
+    .content ul li::marker {
+      color: var(--snomed-blue);
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 28px 0;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 24px;
+    }
+
+    footer a {
+      color: var(--snomed-blue);
+      text-decoration: none;
+    }
+
+    @media (max-width: 600px) {
+      .doc-header, .content { padding: 24px 20px; }
+      .doc-header h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <img src="images/snomed-logo.svg" alt="SNOMED International" class="logo">
+      <div class="header-text">
+        <h1>SNOMED International</h1>
+        <p>SNOMED CT MCP Connector</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="doc-header">
+      <h1>Terms of Use</h1>
+      <div class="doc-meta">
+        <span>Last updated: 9 April 2026</span>
+        <span class="sep">|</span>
+        <a href="https://www.snomed.org/">snomed.org</a>
+        <span class="sep">|</span>
+        <a href="https://snomed.org/mcp-privacy">Privacy Policy</a>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <h2>1. About this server</h2>
+      <p>
+        This MCP server provides access to SNOMED CT clinical terminology by proxying requests to a configured Snowstorm or Snowstorm Lite backend. It is published as open source software under the <a href="./LICENSE">Apache License 2.0</a> and maintained by SNOMED International.
+      </p>
+      <p>
+        These terms apply to your use of the server software and, where applicable, any hosted endpoint operated by SNOMED International.
+      </p>
+
+      <hr class="divider">
+
+      <h2>2. SNOMED CT licensing</h2>
+      <p>
+        This server is a public resource, provided by SNOMED International in the same spirit as the <a href="https://browser.ihtsdotools.org/">SNOMED CT Browser</a> — free to use for browsing, querying, and exploring SNOMED CT terminology.
+      </p>
+      <p>
+        You do not need a licence to use this server for individual, non-commercial browsing and exploration. If you intend to integrate SNOMED CT content into a product or service, standard <a href="https://www.snomed.org/snomed-ct/get-snomed">SNOMED CT licensing terms</a> apply, as they would for any other use of SNOMED CT.
+      </p>
+      <p>
+        Please use this resource responsibly. Bulk extraction, automated scraping, or any use that places unreasonable load on the shared infrastructure is not permitted.
+      </p>
+
+      <hr class="divider">
+
+      <h2>3. Not for clinical decision-making</h2>
+      <p>
+        SNOMED CT is a clinical terminology system. Content returned by this server — including concept definitions, synonyms, descriptions, and hierarchical relationships — is provided for <strong>terminology and informatics purposes only</strong>.
+      </p>
+      <p>
+        It is not intended to be used as a substitute for professional medical advice, clinical judgement, diagnosis, or treatment. No reliance should be placed on terminology outputs in direct patient care contexts without appropriate clinical validation.
+      </p>
+
+      <hr class="divider">
+
+      <h2>4. Self-hosted deployments</h2>
+      <p>
+        When you run this server yourself (whether locally or on your own infrastructure), you do so under the terms of the Apache License 2.0. SNOMED International provides the software as-is and accepts no responsibility for how self-hosted deployments are configured, secured, or operated.
+      </p>
+      <p>
+        You are responsible for ensuring that your deployment complies with applicable data protection laws and that the SNOMED CT backend you connect to is licensed for your use.
+      </p>
+
+      <hr class="divider">
+
+      <h2>5. Hosted endpoints</h2>
+      <p>
+        Where SNOMED International operates a hosted instance of this server, access may be subject to additional terms or usage limits communicated separately. Hosted endpoints are provided for evaluation and development purposes and carry no guarantee of availability, performance, or data currency.
+      </p>
+
+      <hr class="divider">
+
+      <h2>6. Acceptable use</h2>
+      <p>You agree not to use this server to:</p>
+      <ul>
+        <li>Circumvent or assist others in circumventing SNOMED CT licence requirements</li>
+        <li>Systematically extract or mirror SNOMED CT content in bulk for redistribution</li>
+        <li>Interfere with the availability of any shared infrastructure</li>
+        <li>Use terminology content in a way that could mislead clinicians or patients</li>
+      </ul>
+
+      <hr class="divider">
+
+      <h2>7. No warranty</h2>
+      <p>
+        The software is provided "as is", without warranty of any kind, express or implied. SNOMED International makes no representations regarding the accuracy, completeness, or fitness for purpose of terminology content returned by this server.
+      </p>
+      <p>
+        This does not affect any statutory rights you may have.
+      </p>
+
+      <hr class="divider">
+
+      <h2>8. Changes to these terms</h2>
+      <p>
+        SNOMED International may update these terms from time to time. Continued use of the server after an update constitutes acceptance of the revised terms. The date at the top of this document reflects when it was last changed.
+      </p>
+
+      <hr class="divider">
+
+      <h2>9. Contact</h2>
+      <p>
+        For questions about these terms or SNOMED CT licensing, contact SNOMED International at <a href="mailto:info@snomed.org">info@snomed.org</a>.
+      </p>
+
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026, SNOMED International &mdash; <a href="https://www.snomed.org/">snomed.org</a>
+  </footer>
+
+</body>
+</html>

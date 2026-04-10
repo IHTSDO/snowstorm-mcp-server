@@ -46,7 +46,9 @@ address, timestamp, request path) may be retained by the hosting infrastructure
 for operational purposes. These logs do not contain query parameters or request
 bodies.
 
-## Contact
+## More Information & Contact
+
+For the full SNOMED International tooling privacy policy, please see [the privacy policy](https://snomed.org/snomedtools-privacy). 
 
 For questions about this privacy policy, contact SNOMED International at
 [info@snomed.org](mailto:info@snomed.org).
