@@ -122,6 +122,35 @@ def test_validate_code_parses_real_invalid_payload_fixture() -> None:
     assert result.message and "not found" in result.message.lower()
 
 
+def test_validate_code_uses_get_with_query_params() -> None:
+    # Regression: some Snowstorm deployments sit behind a proxy that rejects
+    # POST with HTTP 405 while allowing GET. $validate-code must use the GET
+    # form (url/code/version as query params), like $lookup and $subsumes.
+    target = TargetConfig(base_url="http://test")
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["method"] = request.method
+        seen["path"] = request.url.path
+        seen["query"] = dict(request.url.params)
+        return httpx.Response(
+            200,
+            json={
+                "resourceType": "Parameters",
+                "parameter": [{"name": "result", "valueBoolean": True}],
+            },
+        )
+
+    with _make_service(target, handler) as svc:
+        svc.validate_code(code="404684003", version="http://snomed.info/sct/version/20251101")
+
+    assert seen["method"] == "GET"
+    assert seen["path"].endswith("/CodeSystem/$validate-code")
+    assert seen["query"]["url"] == "http://snomed.info/sct"
+    assert seen["query"]["code"] == "404684003"
+    assert seen["query"]["version"] == "http://snomed.info/sct/version/20251101"
+
+
 def test_subsumes_parses_real_parameters_payload_fixture() -> None:
     target = TargetConfig(base_url="http://test")
     payload = _load_json_fixture("live_contracts/fhir/codesystem_subsumes_22298006_57054005_20251101.json")

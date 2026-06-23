@@ -135,23 +135,16 @@ class SnomedLookupService:
         version: str | None = None,
     ) -> ValidateCodeResult:
         url = f"{self.target.fhir_base_url}/CodeSystem/$validate-code"
-        payload: dict[str, Any] = {
-            "resourceType": "Parameters",
-            "parameter": [
-                {"name": "url", "valueUri": system},
-                {"name": "code", "valueCode": code},
-            ],
-        }
+        # Use the GET form (url/code/version as query params) rather than a
+        # POST Parameters resource. The FHIR spec supports both, but some
+        # Snowstorm deployments sit behind a proxy that allows GET reads and
+        # rejects POST with HTTP 405 (the other FHIR operations here — $lookup,
+        # $subsumes — are all GET for the same reason).
+        params: dict[str, Any] = {"url": system, "code": code}
         if version:
-            payload["parameter"].append({"name": "version", "valueString": version})
+            params["version"] = version
         try:
-            data = self.client.request(
-                "POST",
-                url,
-                json=payload,
-                headers={"Content-Type": "application/fhir+json"},
-                expect_json=True,
-            )
+            data = self.client.request("GET", url, params=params, expect_json=True)
             parsed = _parse_parameters_resource(data)
             return ValidateCodeResult(
                 code=code,
