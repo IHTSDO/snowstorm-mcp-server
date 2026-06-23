@@ -16,9 +16,11 @@ These terms apply to your use of the server software and, where applicable, any 
 
 ## 2. SNOMED CT licensing
 
-This server is a public resource, provided by SNOMED International in the same spirit as the [SNOMED CT Browser](https://browser.ihtsdotools.org/) — free to use for browsing, querying, and exploring SNOMED CT terminology.
+This server is a public resource, provided by SNOMED International on the same basis as the [SNOMED CT Browser](https://browser.ihtsdotools.org/) — free to use for browsing, querying, and exploring SNOMED CT terminology. Access to SNOMED CT content through this server is governed by the SNOMED CT Browser License Agreement.
 
-You do not need a licence to use this server for individual, non-commercial browsing and exploration. If you intend to integrate SNOMED CT content into a product or service, standard [SNOMED CT licensing terms](https://www.snomed.org/snomed-ct/get-snomed) apply, as they would for any other use of SNOMED CT.
+Under that agreement, End Users who do not hold a SNOMED International Affiliate License may use this server to explore and evaluate the terminology, but may not copy SNOMED CT identifiers into a record system, database, or document, translate or modify SNOMED CT content, or redistribute it. SNOMED International Affiliates may use this server within the terms of their [Affiliate License](http://snomed.org/license-affiliate).
+
+If you want to host this server yourself, integrate SNOMED CT into a product or service, or otherwise use SNOMED CT beyond exploring and evaluating it, you should obtain a full SNOMED CT licence — see [Get SNOMED CT](https://www.snomed.org/get-snomed).
 
 Please use this resource responsibly. Bulk extraction, automated scraping, or any use that places unreasonable load on the shared infrastructure is not permitted.
 

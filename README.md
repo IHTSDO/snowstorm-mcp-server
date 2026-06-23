@@ -491,8 +491,9 @@ enabled, the server holds in-memory call timestamps per session purely for
 rate enforcement; this state contains no PII and is automatically discarded
 when the session ends.
 
-Responses contain SNOMED CT terminology content subject to
-[SNOMED International licensing terms](https://www.snomed.org/snomed-ct/get-snomed).
+Responses contain SNOMED CT terminology content. Access to that content
+through this server is governed by the SNOMED CT Browser License Agreement
+(see [License](#license) below).
 When deployed as a hosted service, standard web server access logs (IP address,
 timestamp, request path) may be retained by the hosting infrastructure for
 operational purposes.
@@ -507,4 +508,25 @@ For the full privacy policy, see [PRIVACY.md](PRIVACY.md).
 
 ## License
 
-This project is licensed under [Apache 2.0](LICENSE).
+The **server software** is licensed under [Apache 2.0](LICENSE).
+
+**SNOMED CT content** returned by this server is not covered by that licence.
+Access to SNOMED CT through this server is governed by the
+[SNOMED CT Browser License Agreement](SNOMED%20CT%20Browser%20License%20Agreement%20-%202026.pdf),
+the same basis on which the public [SNOMED CT Browser](https://browser.ihtsdotools.org/)
+is provided. In summary, End Users who do not hold a SNOMED International
+Affiliate License may use this server to explore and evaluate the terminology,
+but may not:
+
+- copy SNOMED CT identifiers into a record system, database, or document
+  (use as a "Data Creation System" or "Data Analysis System");
+- translate or modify SNOMED CT content; or
+- redistribute or share SNOMED CT content.
+
+If you want to host this server yourself, integrate SNOMED CT into a product or
+service, or otherwise use SNOMED CT beyond exploring and evaluating it, you
+should obtain a full SNOMED CT licence — see
+[Get SNOMED CT](https://www.snomed.org/get-snomed). SNOMED International
+Affiliates may use this server within the terms of their
+[Affiliate License](http://snomed.org/license-affiliate). SNOMED CT is
+© SNOMED International; "SNOMED" and "SNOMED CT" are registered trademarks.

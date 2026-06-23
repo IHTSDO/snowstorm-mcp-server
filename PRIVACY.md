@@ -36,8 +36,10 @@ persisted to disk or transmitted externally.
 ## Backend data
 
 Responses contain SNOMED CT terminology content (concept codes, descriptions,
-relationships) provided by the connected Snowstorm instance. SNOMED CT content
-is subject to the [SNOMED International licensing terms](https://www.snomed.org/snomed-ct/get-snomed).
+relationships) provided by the connected Snowstorm instance. Access to SNOMED CT
+content through this server is governed by the SNOMED CT Browser License
+Agreement, the same basis on which the public
+[SNOMED CT Browser](https://browser.ihtsdotools.org/) is provided.
 
 ## Hosting
 
