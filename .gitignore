@@ -13,3 +13,4 @@ data/
 eval-results/
 uv.lock
 .vscode
+.claude/
