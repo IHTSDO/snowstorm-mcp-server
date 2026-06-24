@@ -1,0 +1,26 @@
+{
+  "name": "snowstorm-mcp-server",
+  "version": "1.0.0",
+  "description": "Query SNOMED CT clinical terminology via Snowstorm and Snowstorm Lite backends. Lookup, search, validation, hierarchy navigation, and value set expansion across all SNOMED CT editions (International, US, UK, AU, etc.).",
+  "author": {
+    "name": "SNOMED International",
+    "url": "https://www.snomed.org"
+  },
+  "homepage": "https://github.com/IHTSDO/snowstorm-mcp-server",
+  "repository": "https://github.com/IHTSDO/snowstorm-mcp-server",
+  "license": "Apache-2.0",
+  "keywords": [
+    "snomed",
+    "snomed-ct",
+    "clinical-terminology",
+    "health-informatics",
+    "fhir",
+    "snowstorm"
+  ],
+  "mcpServers": {
+    "snowstorm": {
+      "type": "http",
+      "url": "https://snowstorm-mcp.snomedtools.org/mcp"
+    }
+  }
+}
