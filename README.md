@@ -137,6 +137,21 @@ Logs go to stderr and are captured by Claude Desktop in `mcp-server-snowstorm.lo
 The server prints the active guard configuration on startup so you can confirm
 settings are being loaded from the right config file.
 
+### Logging
+
+By default the server logs one JSON object per line with a UTC timestamp,
+which log aggregators can parse directly:
+
+```json
+{"timestamp": "2026-07-13T10:29:04.929Z", "level": "ERROR", "logger": "snowstorm_mcp_server.mcp_app", "message": "Tool call failed [E_BACKEND_HTTP]: HTTP 502 ...", "error_code": "E_BACKEND_HTTP", "error_type": "HttpRequestError", "status_code": 502}
+```
+
+Tool failures carry structured fields (`error_code`, `error_type`,
+`status_code`) so you can break an error rate down by cause. Guard trips
+(rate limits, blocked ECL, traversal detection) are logged as warnings.
+Use `--log-format text` for the traditional human-readable output during
+local development.
+
 **SSE / Streamable HTTP** (for HTTP-based MCP clients):
 
 ```bash
@@ -347,8 +362,21 @@ Expected response shape:
 {
   "terminology": "snomedct",
   "code": "404684003",
+  "found": true,
   "display": "Clinical finding",
   "system": "http://snomed.info/sct"
+}
+```
+
+If the code does not exist in the edition, the tool returns a structured
+negative rather than an error:
+
+```json
+{
+  "terminology": "snomedct",
+  "code": "99999999999",
+  "found": false,
+  "message": "Code '99999999999' was not found in this SNOMED CT edition/version. Verify the concept ID or search for the concept by term."
 }
 ```
 
@@ -433,7 +461,7 @@ Guards that are always active:
 | Global rate limit | 10 calls / 60 s | Rolling window across all sessions in the process |
 | Concurrency cap | 3 concurrent | Semaphore on parallel Snowstorm requests |
 | ECL pre-screening | — | Blocks known-expensive patterns before they hit the backend |
-| Count capping | 500 max | Hard ceiling on concepts returned per `snomed_expand` call |
+| Count capping | 500 max | Hard ceiling on concepts requested per `snomed_expand` or hierarchy tool call |
 | Recursive traversal detection | 5 hierarchy calls / min | Catches looping `get_children` patterns |
 | Expansion size threshold | disabled | Preflight `summary_only` check — blocks any expansion over N concepts regardless of concept ID |
 
@@ -478,7 +506,11 @@ Practical guidance:
 - Use at least `3` searchable characters (letters/digits).
 - For short acronyms, include context (for example use a longer phrase instead of `AD`).
 
-The MCP server validates this early and returns a clear error message before calling Snowstorm.
+The MCP server validates this early: a too-short term returns a successful
+response with zero hits and a `notice` field explaining the constraint, without
+calling Snowstorm. Expected negative outcomes (a term that is too short, or a
+`snomed_lookup` code that does not exist) are returned as structured data rather
+than tool errors, so MCP error metrics only reflect genuine failures.
 
 ## Privacy policy
 
