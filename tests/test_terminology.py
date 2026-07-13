@@ -3,7 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from snowstorm_mcp_server.capabilities import BackendType
+from snowstorm_mcp_server.capabilities import BackendType, Capabilities, TargetStatus
 from snowstorm_mcp_server.config import AppConfig, TargetConfig
 from snowstorm_mcp_server.http_client import HttpClient
 from snowstorm_mcp_server.terminology import (
@@ -361,7 +361,7 @@ def test_build_registry_single_terminology_becomes_default(monkeypatch) -> None:
     assert registry.default_terminology == "snomedct"
 
 
-def test_build_registry_fallback_on_discovery_failure(monkeypatch) -> None:
+def test_build_registry_no_stub_on_discovery_failure(monkeypatch) -> None:
     config = AppConfig(
         targets={
             "mysnowstorm": TargetConfig(base_url="http://test"),
@@ -393,13 +393,19 @@ def test_build_registry_fallback_on_discovery_failure(monkeypatch) -> None:
 
     registry = build_registry(config)
 
-    assert "mysnowstorm" in registry.list_terminology_names()
+    # Discovery failure must NOT silently register a terminology named after the
+    # target — that masks misconfiguration. The target should have zero
+    # terminologies and the error must be surfaced in discovery_errors.
+    assert registry.list_terminology_names() == []
+    assert "mysnowstorm" in registry.list_target_names()
     assert len(registry.discovery_errors) == 1
+    assert "boom" in registry.discovery_errors[0]
+    assert registry.has_pending_discovery()
 
 
 def test_build_registry_default_terminology_graceful_on_discovery_failure(monkeypatch) -> None:
-    """When discovery fails and the fallback terminology name doesn't match
-    default_terminology, the server should start without a default rather than crash."""
+    """When discovery fails, the configured default_terminology cannot be
+    resolved; the server should start without a default rather than crash."""
     config = AppConfig(
         default_terminology="snomedct",
         targets={
@@ -432,5 +438,149 @@ def test_build_registry_default_terminology_graceful_on_discovery_failure(monkey
     registry = build_registry(config)
 
     assert registry.default_terminology is None
-    assert "dev-snowstorm" in registry.list_terminology_names()
+    assert registry.list_terminology_names() == []
+    assert "dev-snowstorm" in registry.list_target_names()
     assert any("default_terminology" in e for e in registry.discovery_errors)
+
+
+def _registry_with_pending_target(
+    target_name: str = "mysnowstorm",
+    configured_default: str | None = None,
+) -> tuple[TerminologyRegistry, TargetConfig]:
+    target = TargetConfig(base_url="http://test")
+    registry = TerminologyRegistry()
+    registry.register_target(target_name, target)
+    registry.set_target_status(
+        target_name,
+        TargetStatus(
+            reachable=True,
+            base_url=target.base_url,
+            fhir_base_url=target.fhir_base_url,
+            capabilities=Capabilities(backend_type=BackendType.SNOWSTORM),
+        ),
+    )
+    registry.record_discovery_error(target_name, "boom")
+    registry.mark_discovery_pending(target_name, target)
+    if configured_default:
+        registry.set_configured_default(configured_default)
+        registry.record_discovery_error(
+            "default_terminology",
+            f"default_terminology '{configured_default}' not found; continuing without a default",
+        )
+    return registry, target
+
+
+def test_retry_pending_discovery_recovers_when_backend_comes_up(monkeypatch) -> None:
+    registry, _target = _registry_with_pending_target()
+
+    from snowstorm_mcp_server import terminology
+
+    def patched_discover(target_name, target, *, client=None):
+        return [
+            TerminologyInfo(
+                name="snomedct",
+                display_name="International Edition",
+                target_name=target_name,
+                backend_type=BackendType.SNOWSTORM,
+                branch_path="MAIN",
+            )
+        ]
+
+    monkeypatch.setattr(terminology, "discover_snowstorm_terminologies", patched_discover)
+
+    assert registry.retry_pending_discovery() is True
+    assert registry.list_terminology_names() == ["snomedct"]
+    assert not registry.has_pending_discovery()
+    assert registry.discovery_errors == []
+    # Single terminology with no configured default becomes the default.
+    assert registry.default_terminology == "snomedct"
+    # Nothing left to retry.
+    assert registry.retry_pending_discovery() is False
+
+
+def test_retry_pending_discovery_applies_configured_default(monkeypatch) -> None:
+    registry, _target = _registry_with_pending_target(configured_default="snomedct")
+
+    from snowstorm_mcp_server import terminology
+
+    def patched_discover(target_name, target, *, client=None):
+        return [
+            TerminologyInfo(
+                name="snomedct",
+                target_name=target_name,
+                backend_type=BackendType.SNOWSTORM,
+                branch_path="MAIN",
+            ),
+            TerminologyInfo(
+                name="snomedct-us",
+                target_name=target_name,
+                backend_type=BackendType.SNOWSTORM,
+                branch_path="MAIN/SNOMEDCT-US",
+            ),
+        ]
+
+    monkeypatch.setattr(terminology, "discover_snowstorm_terminologies", patched_discover)
+
+    assert registry.retry_pending_discovery() is True
+    assert registry.default_terminology == "snomedct"
+    assert registry.discovery_errors == []
+
+
+def test_retry_pending_discovery_reprobes_unknown_backend(monkeypatch) -> None:
+    """A backend that was completely down at startup has unknown backend type;
+    a retry must re-probe it and then discover its terminologies."""
+    target = TargetConfig(base_url="http://test")
+    registry = TerminologyRegistry()
+    registry.register_target("mysnowstorm", target)
+    registry.record_discovery_error("mysnowstorm", "connection refused")
+    registry.mark_discovery_pending("mysnowstorm", target)
+
+    from snowstorm_mcp_server import terminology
+
+    def patched_probe(target_cfg, *, client=None):
+        return TargetStatus(
+            reachable=True,
+            base_url=target_cfg.base_url,
+            fhir_base_url=target_cfg.fhir_base_url,
+            capabilities=Capabilities(
+                backend_type=BackendType.SNOWSTORM,
+                has_fhir=True,
+                has_native_api=True,
+            ),
+        )
+
+    def patched_discover(target_name, target_cfg, *, client=None):
+        return [
+            TerminologyInfo(
+                name="snomedct",
+                target_name=target_name,
+                backend_type=BackendType.SNOWSTORM,
+                branch_path="MAIN",
+            )
+        ]
+
+    monkeypatch.setattr(terminology, "probe_target", patched_probe)
+    monkeypatch.setattr(terminology, "discover_snowstorm_terminologies", patched_discover)
+
+    assert registry.retry_pending_discovery() is True
+    assert registry.list_terminology_names() == ["snomedct"]
+    status = registry.get_target_status("mysnowstorm")
+    assert status is not None
+    assert status.capabilities.backend_type == BackendType.SNOWSTORM
+    assert registry.discovery_errors == []
+
+
+def test_retry_pending_discovery_keeps_error_while_backend_down(monkeypatch) -> None:
+    registry, _target = _registry_with_pending_target()
+
+    from snowstorm_mcp_server import terminology
+
+    def patched_discover(target_name, target, *, client=None):
+        raise DiscoveryError("still down")
+
+    monkeypatch.setattr(terminology, "discover_snowstorm_terminologies", patched_discover)
+
+    assert registry.retry_pending_discovery() is False
+    assert registry.has_pending_discovery()
+    assert registry.list_terminology_names() == []
+    assert any("still down" in e for e in registry.discovery_errors)
