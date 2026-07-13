@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import threading
 from typing import Any
 
 from .capabilities import probe_target
 from .config import AppConfig, TargetConfig
 from .fhir import SnomedLookupService
+from .http_client import HttpClient
 from .snowstorm_native import SnowstormNativeService
 from .terminology import TerminologyInfo, TerminologyRegistry, build_registry
 
@@ -17,6 +19,26 @@ class ServerRuntime:
     def __init__(self, config: AppConfig) -> None:
         self.config = config
         self.registry: TerminologyRegistry = build_registry(config)
+        # One HttpClient per target, shared across tool calls so the underlying
+        # httpx connection pool is reused instead of paying a TCP/TLS handshake
+        # per request. httpx.Client is thread-safe.
+        self._clients: dict[str, HttpClient] = {}
+        self._clients_lock = threading.Lock()
+
+    def _client_for(self, target_cfg: TargetConfig) -> HttpClient:
+        key = target_cfg.name or target_cfg.base_url
+        with self._clients_lock:
+            client = self._clients.get(key)
+            if client is None:
+                client = HttpClient(target_cfg)
+                self._clients[key] = client
+            return client
+
+    def close(self) -> None:
+        with self._clients_lock:
+            for client in self._clients.values():
+                client.close()
+            self._clients.clear()
 
     def _resolve(
         self,
@@ -125,7 +147,7 @@ class ServerRuntime:
         version: str | None = None,
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
-        with SnomedLookupService(target_cfg) as svc:
+        with SnomedLookupService(target_cfg, client=self._client_for(target_cfg)) as svc:
             result = svc.lookup(code=code, system=system, version=version)
         return {"terminology": info.name, **result.model_dump()}
 
@@ -139,7 +161,7 @@ class ServerRuntime:
         version: str | None = None,
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
-        with SnomedLookupService(target_cfg) as svc:
+        with SnomedLookupService(target_cfg, client=self._client_for(target_cfg)) as svc:
             result = svc.validate_code(code=code, system=system, version=version)
         return {"terminology": info.name, **result.model_dump()}
 
@@ -154,7 +176,7 @@ class ServerRuntime:
         version: str | None = None,
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
-        with SnomedLookupService(target_cfg) as svc:
+        with SnomedLookupService(target_cfg, client=self._client_for(target_cfg)) as svc:
             result = svc.subsumes(code_a=code_a, code_b=code_b, system=system, version=version)
         return {"terminology": info.name, **result.model_dump()}
 
@@ -173,7 +195,7 @@ class ServerRuntime:
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
         applied_max_contains = min(max_contains, self.config.response_limits.max_expand_contains)
-        with SnomedLookupService(target_cfg) as svc:
+        with SnomedLookupService(target_cfg, client=self._client_for(target_cfg)) as svc:
             result = svc.expand(
                 value_set_url=value_set_url,
                 filter=filter,
@@ -193,7 +215,7 @@ class ServerRuntime:
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
         self._ensure_native_supported(info.target_name, info.name, "Snowstorm native code system listing")
-        with SnowstormNativeService(target_cfg) as svc:
+        with SnowstormNativeService(target_cfg, client=self._client_for(target_cfg)) as svc:
             result = svc.list_codesystems()
         return {"terminology": info.name, **result.model_dump()}
 
@@ -206,7 +228,7 @@ class ServerRuntime:
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
         self._ensure_native_supported(info.target_name, info.name, "Snowstorm native code system versions")
-        with SnowstormNativeService(target_cfg) as svc:
+        with SnowstormNativeService(target_cfg, client=self._client_for(target_cfg)) as svc:
             result = svc.list_versions(code_system_short_name=code_system_short_name)
         return {"terminology": info.name, **result.model_dump()}
 
@@ -223,7 +245,7 @@ class ServerRuntime:
         self._ensure_native_supported(info.target_name, info.name, "Snowstorm native concept search")
         branch = info.branch_path or "MAIN"
         applied_limit = min(limit, self.config.response_limits.max_search_hits)
-        with SnowstormNativeService(target_cfg) as svc:
+        with SnowstormNativeService(target_cfg, client=self._client_for(target_cfg)) as svc:
             result = svc.search_concepts(
                 term=term, branch=branch, limit=applied_limit, active_only=active_only,
             )
@@ -242,7 +264,7 @@ class ServerRuntime:
         self._ensure_native_supported(info.target_name, info.name, "Snowstorm native concept detail")
         branch = info.branch_path or "MAIN"
         applied_max_synonyms = min(max_synonyms, self.config.response_limits.max_synonyms)
-        with SnowstormNativeService(target_cfg) as svc:
+        with SnowstormNativeService(target_cfg, client=self._client_for(target_cfg)) as svc:
             result = svc.get_concept(
                 concept_id=concept_id,
                 branch=branch,
