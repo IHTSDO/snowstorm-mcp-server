@@ -3,10 +3,10 @@ from __future__ import annotations
 import argparse
 import logging
 import os
-import sys
 
 from dotenv import find_dotenv, load_dotenv
 
+from .logging_utils import configure_logging
 from .mcp_app import create_mcp_app
 
 DEFAULT_CORS_ALLOW_ORIGINS = ("https://claude.ai", "https://claude.com")
@@ -44,6 +44,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         help="Logging level (default: INFO)",
     )
+    parser.add_argument(
+        "--log-format",
+        default="json",
+        choices=["json", "text"],
+        help=(
+            "Log output format (default: json). "
+            "json emits one JSON object per line with a UTC timestamp."
+        ),
+    )
     return parser
 
 
@@ -78,11 +87,7 @@ def main() -> None:
 
     load_dotenv(find_dotenv(usecwd=True))
     args = build_arg_parser().parse_args()
-    logging.basicConfig(
-        stream=sys.stderr,
-        level=getattr(logging, args.log_level),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    configure_logging(getattr(logging, args.log_level), args.log_format)
     if args.transport == "streamable-http":
         asgi_app = _build_streamable_http_asgi(args.config)
         uvicorn.run(
