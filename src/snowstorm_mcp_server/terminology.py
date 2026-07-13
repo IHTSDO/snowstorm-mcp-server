@@ -115,11 +115,22 @@ class TerminologyRegistry:
         self._targets: dict[str, TargetConfig] = {}
         self._target_statuses: dict[str, TargetStatus] = {}
         self._default_terminology: str | None = None
-        self.discovery_errors: list[str] = []
+        self._configured_default: str | None = None
+        self._pending_discovery: dict[str, TargetConfig] = {}
+        self._discovery_errors: dict[str, str] = {}
 
     @property
     def default_terminology(self) -> str | None:
         return self._default_terminology
+
+    @property
+    def discovery_errors(self) -> list[str]:
+        return list(self._discovery_errors.values())
+
+    def record_discovery_error(self, source: str, message: str) -> None:
+        """Record a discovery problem keyed by its source (target name or
+        'default_terminology') so it can be cleared if a later retry succeeds."""
+        self._discovery_errors[source] = message
 
     def register(self, info: TerminologyInfo, target: TargetConfig) -> None:
         if info.name in self._terminologies:
@@ -131,6 +142,16 @@ class TerminologyRegistry:
             )
         self._terminologies[info.name] = info
         self._targets[info.target_name] = target
+
+    def register_target(self, target_name: str, target: TargetConfig) -> None:
+        """Record a target even before (or without) any terminology being
+        registered for it, so tools can report on it by name."""
+        self._targets[target_name] = target
+
+    def set_configured_default(self, name: str | None) -> None:
+        """Record the configured default terminology name so a later discovery
+        retry can apply it once the terminology becomes available."""
+        self._configured_default = name
 
     def set_default(self, name: str | None) -> None:
         if name is not None and name not in self._terminologies:
@@ -217,6 +238,77 @@ class TerminologyRegistry:
     def set_target_status(self, target_name: str, status: TargetStatus) -> None:
         self._target_statuses[target_name] = status
 
+    def mark_discovery_pending(self, target_name: str, target: TargetConfig) -> None:
+        """Flag a target whose terminology discovery failed so it can be retried
+        later without restarting the server."""
+        self._pending_discovery[target_name] = target
+
+    def has_pending_discovery(self) -> bool:
+        return bool(self._pending_discovery)
+
+    def retry_pending_discovery(self) -> bool:
+        """Re-attempt terminology discovery for targets that failed at startup.
+
+        Targets whose backend type could not be determined (e.g. the backend was
+        down when the server started) are re-probed first. Returns True if at
+        least one new terminology was registered. On success the target's
+        discovery error is cleared and the configured default terminology is
+        applied if it has become available.
+        """
+        registered_any = False
+        for target_name, target_cfg in list(self._pending_discovery.items()):
+            status = self.get_target_status(target_name)
+            backend_type = (
+                status.capabilities.backend_type if status else BackendType.UNKNOWN
+            )
+            if backend_type == BackendType.UNKNOWN:
+                status = probe_target(target_cfg)
+                self.set_target_status(target_name, status)
+                backend_type = status.capabilities.backend_type
+            if backend_type == BackendType.UNKNOWN:
+                logger.debug(
+                    "Discovery retry: backend type for target '%s' still unknown.",
+                    target_name,
+                )
+                continue
+            try:
+                if backend_type == BackendType.LITE:
+                    terminologies = [build_lite_terminology(target_name, target_cfg)]
+                else:
+                    terminologies = discover_snowstorm_terminologies(target_name, target_cfg)
+            except DiscoveryError as exc:
+                self.record_discovery_error(target_name, str(exc))
+                logger.debug("Discovery retry failed for target '%s': %s", target_name, exc)
+                continue
+            del self._pending_discovery[target_name]
+            self._discovery_errors.pop(target_name, None)
+            for info in terminologies:
+                try:
+                    self.register(info, target_cfg)
+                except DuplicateTerminologyError as exc:
+                    self.record_discovery_error(target_name, str(exc))
+                    logger.warning("Discovery retry for target '%s': %s", target_name, exc)
+                    continue
+                registered_any = True
+            logger.info(
+                "Terminology discovery recovered for target '%s': registered %d terminologies.",
+                target_name,
+                len(terminologies),
+            )
+        if registered_any:
+            self._apply_default_after_recovery()
+        return registered_any
+
+    def _apply_default_after_recovery(self) -> None:
+        if self._default_terminology is not None:
+            return
+        if self._configured_default:
+            if self._configured_default in self._terminologies:
+                self.set_default(self._configured_default)
+                self._discovery_errors.pop("default_terminology", None)
+        elif len(self._terminologies) == 1:
+            self.set_default(next(iter(self._terminologies)))
+
 
 # ---------------------------------------------------------------------------
 # Factory
@@ -233,20 +325,25 @@ def build_registry(config: AppConfig) -> TerminologyRegistry:
         backend_type = status.capabilities.backend_type
 
         if backend_type == BackendType.SNOWSTORM:
+            # Record the target up front so tools can report on it by name even
+            # if discovery finds no terminologies or fails outright.
+            registry.register_target(target_name, target_cfg)
             try:
                 terminologies = discover_snowstorm_terminologies(target_name, target_cfg)
             except DiscoveryError as exc:
                 logger.error(
                     "Terminology discovery failed for target '%s': %s. "
-                    "No terminologies will be registered for this target. "
-                    "Verify base_url and that GET {base_url}/codesystems is reachable.",
+                    "No terminologies will be registered for this target until "
+                    "discovery succeeds on a later retry. "
+                    "Verify base_url and that GET %s/codesystems is reachable.",
                     target_name,
                     exc,
+                    target_cfg.base_url,
                 )
-                registry.discovery_errors.append(str(exc))
-                # Still record the target so tools can report on it, but do not
-                # invent a fake terminology that masks the misconfiguration.
-                registry._targets[target_name] = target_cfg
+                registry.record_discovery_error(target_name, str(exc))
+                # Do not invent a fake terminology that masks the
+                # misconfiguration; flag the target for lazy re-discovery.
+                registry.mark_discovery_pending(target_name, target_cfg)
                 continue
             for info in terminologies:
                 registry.register(info, target_cfg)
@@ -256,14 +353,22 @@ def build_registry(config: AppConfig) -> TerminologyRegistry:
             registry.register(info, target_cfg)
 
         else:
-            registry.discovery_errors.append(
-                f"Target '{target_name}' has unknown backend type; skipping."
+            detail = f": {status.error}" if status.error else ""
+            registry.register_target(target_name, target_cfg)
+            registry.record_discovery_error(
+                target_name,
+                f"Target '{target_name}' backend type could not be determined"
+                f"{detail}. It will be re-probed when terminologies are next "
+                "requested.",
             )
+            registry.mark_discovery_pending(target_name, target_cfg)
 
     default = config.default_terminology
     if default:
+        normalized_default = default.strip().lower()
+        registry.set_configured_default(normalized_default)
         try:
-            registry.set_default(default.strip().lower())
+            registry.set_default(normalized_default)
         except TerminologyNotFoundError:
             available = ", ".join(registry.list_terminology_names()) or "(none)"
             logger.warning(
@@ -274,8 +379,9 @@ def build_registry(config: AppConfig) -> TerminologyRegistry:
                 default,
                 available,
             )
-            registry.discovery_errors.append(
-                f"default_terminology '{default}' not found; continuing without a default"
+            registry.record_discovery_error(
+                "default_terminology",
+                f"default_terminology '{default}' not found; continuing without a default",
             )
     elif len(registry._terminologies) == 1:
         only_name = next(iter(registry._terminologies))

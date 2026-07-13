@@ -237,3 +237,98 @@ def test_runtime_search_limit_is_capped_by_config(monkeypatch) -> None:
 
     assert payload["terminology"] == "snomedct"
     assert payload["limit"] == 2
+
+
+def _make_pending_discovery_registry() -> tuple[TerminologyRegistry, TargetConfig]:
+    target = TargetConfig(base_url="http://example.test")
+    registry = TerminologyRegistry()
+    registry.register_target("snowstorm", target)
+    registry.set_target_status(
+        "snowstorm",
+        TargetStatus(
+            reachable=True,
+            base_url=target.base_url,
+            fhir_base_url=target.fhir_base_url,
+            capabilities=Capabilities(backend_type=BackendType.SNOWSTORM),
+        ),
+    )
+    registry.record_discovery_error("snowstorm", "boom")
+    registry.mark_discovery_pending("snowstorm", target)
+    return registry, target
+
+
+def _recovered_terminology(target_name: str) -> TerminologyInfo:
+    return TerminologyInfo(
+        name="snomedct",
+        target_name=target_name,
+        backend_type=BackendType.SNOWSTORM,
+        branch_path="MAIN",
+    )
+
+
+def test_runtime_list_terminologies_retries_pending_discovery(monkeypatch) -> None:
+    registry, target = _make_pending_discovery_registry()
+
+    from snowstorm_mcp_server import runtime as runtime_module
+    from snowstorm_mcp_server import terminology
+
+    monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
+    monkeypatch.setattr(
+        terminology,
+        "discover_snowstorm_terminologies",
+        lambda target_name, _target, *, client=None: [_recovered_terminology(target_name)],
+    )
+    server = ServerRuntime(AppConfig(targets={"snowstorm": target}))
+
+    payload = server.list_terminologies()
+
+    assert [t["name"] for t in payload] == ["snomedct"]
+    assert server.registry.default_terminology == "snomedct"
+    assert server.registry.discovery_errors == []
+
+
+def test_runtime_resolve_retries_pending_discovery(monkeypatch) -> None:
+    registry, target = _make_pending_discovery_registry()
+
+    from snowstorm_mcp_server import runtime as runtime_module
+    from snowstorm_mcp_server import terminology
+
+    monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
+    monkeypatch.setattr(
+        terminology,
+        "discover_snowstorm_terminologies",
+        lambda target_name, _target, *, client=None: [_recovered_terminology(target_name)],
+    )
+    server = ServerRuntime(AppConfig(targets={"snowstorm": target}))
+
+    info, target_cfg = server._resolve(None)
+
+    assert info.name == "snomedct"
+    assert target_cfg is target
+
+
+def test_runtime_discovery_retry_is_throttled(monkeypatch) -> None:
+    import time
+
+    from snowstorm_mcp_server.terminology import TerminologyNotFoundError
+
+    registry, target = _make_pending_discovery_registry()
+
+    from snowstorm_mcp_server import runtime as runtime_module
+    from snowstorm_mcp_server import terminology
+
+    monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
+    calls: list[str] = []
+
+    def counting_discover(target_name, _target, *, client=None):
+        calls.append(target_name)
+        return [_recovered_terminology(target_name)]
+
+    monkeypatch.setattr(terminology, "discover_snowstorm_terminologies", counting_discover)
+    server = ServerRuntime(AppConfig(targets={"snowstorm": target}))
+    # Simulate a retry having just run so the throttle window is active.
+    server._last_discovery_retry = time.monotonic()
+
+    with pytest.raises(TerminologyNotFoundError):
+        server._resolve(None)
+    assert calls == []

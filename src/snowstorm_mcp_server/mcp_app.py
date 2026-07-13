@@ -154,6 +154,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         return {
             "terminologies": runtime.list_terminologies(),
             "default_terminology": runtime.registry.default_terminology,
+            "discovery_errors": runtime.registry.discovery_errors,
         }
 
     @mcp.tool(
