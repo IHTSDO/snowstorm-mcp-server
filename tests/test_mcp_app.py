@@ -211,6 +211,32 @@ class TestResponseTruncation:
         truncated = _truncate_response(result)
         assert "_truncated" not in truncated
 
+    def test_large_dict_field_is_removed(self):
+        """Dict-valued payloads (e.g. raw_parameters, raw FHIR metadata) must
+        also be truncated, not just list-valued ones."""
+        result = {
+            "code": "22298006",
+            "raw_parameters": {f"param{i}": ["x" * 200] for i in range(2000)},
+        }
+        truncated = _truncate_response(result)
+        assert len(json.dumps(truncated, default=str)) <= MAX_RESPONSE_CHARS
+        assert truncated["_truncated"] is True
+        assert truncated["raw_parameters"] == {
+            "_removed": "Field removed to stay within size limits."
+        }
+        assert truncated["code"] == "22298006"
+
+    def test_list_trimmed_before_dict_removed(self):
+        """When a large list fits after trimming, dict fields stay intact."""
+        result = {
+            "items": [{"data": "x" * 200} for _ in range(2000)],
+            "meta": {"software": "Snowstorm"},
+        }
+        truncated = _truncate_response(result)
+        assert len(json.dumps(truncated, default=str)) <= MAX_RESPONSE_CHARS
+        assert truncated["meta"] == {"software": "Snowstorm"}
+        assert len(truncated["items"]) < 2000
+
 
 class TestSnomedGetAncestors:
     def test_all_ancestors_ecl(self, mcp, _captured_expand):
@@ -225,6 +251,11 @@ class TestSnomedGetAncestors:
         _call_tool(mcp, "snomed_get_ancestors", {"concept_id": "123", "offset": 10, "count": 25})
         assert _captured_expand["offset"] == 10
         assert _captured_expand["count"] == 25
+
+    def test_count_is_capped(self, mcp, _captured_expand):
+        """Hierarchy tools must respect max_count_per_call (default 500)."""
+        _call_tool(mcp, "snomed_get_ancestors", {"concept_id": "123", "count": 100_000})
+        assert _captured_expand["count"] == 500
 
 
 class TestSnomedGetChildren:

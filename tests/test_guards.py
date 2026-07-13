@@ -461,10 +461,15 @@ class TestQueryGuards:
 
     def test_pre_hierarchy_tracks_calls(self):
         g = QueryGuards(max_children_calls_per_minute=2)
-        g.pre_hierarchy("123")
-        g.pre_hierarchy("456")
+        g.pre_hierarchy("123", 50)
+        g.pre_hierarchy("456", 50)
         with pytest.raises(SnowstormGuardError, match="recursive"):
-            g.pre_hierarchy("789")
+            g.pre_hierarchy("789", 50)
+
+    def test_pre_hierarchy_caps_count(self):
+        g = QueryGuards(max_count_per_call=500)
+        assert g.pre_hierarchy("123", 50) == 50
+        assert g.pre_hierarchy("456", 1_000_000) == 500
 
     def test_pre_lookup_applies_global_rate_limit(self):
         g = QueryGuards(rate_limit_calls=2, rate_limit_window_seconds=60)
@@ -611,6 +616,6 @@ class TestQueryGuards:
             per_session_rate_limit_calls=1,
         )
         session = _Session()
-        g.pre_hierarchy("123", session)
+        g.pre_hierarchy("123", 50, session)
         with pytest.raises(SnowstormRateLimitError):
-            g.pre_hierarchy("456", session)
+            g.pre_hierarchy("456", 50, session)

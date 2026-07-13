@@ -545,7 +545,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         count: int = 50,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        guards.pre_hierarchy(concept_id, ctx.session if ctx is not None else None)
+        capped_count = guards.pre_hierarchy(concept_id, count, ctx.session if ctx is not None else None)
         ecl_operator = ">!" if direct_only else ">"
         ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/{ecl_operator} {concept_id}"
         with guards.concurrency:
@@ -555,7 +555,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                     target=target,
                     value_set_url=ecl_url,
                     offset=offset,
-                    count=count,
+                    count=capped_count,
                 )
             )
 
@@ -583,7 +583,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         count: int = 50,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        guards.pre_hierarchy(concept_id, ctx.session if ctx is not None else None)
+        capped_count = guards.pre_hierarchy(concept_id, count, ctx.session if ctx is not None else None)
         ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/<! {concept_id}"
         with guards.concurrency:
             return _tool_guard(
@@ -592,7 +592,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                     target=target,
                     value_set_url=ecl_url,
                     offset=offset,
-                    count=count,
+                    count=capped_count,
                 )
             )
 
@@ -616,7 +616,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         count: int = 50,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        guards.pre_hierarchy(concept_id, ctx.session if ctx is not None else None)
+        capped_count = guards.pre_hierarchy(concept_id, count, ctx.session if ctx is not None else None)
         ecl_url = f"http://snomed.info/sct?fhir_vs=ecl/< {concept_id}"
         with guards.concurrency:
             return _tool_guard(
@@ -625,7 +625,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
                     target=target,
                     value_set_url=ecl_url,
                     offset=offset,
-                    count=count,
+                    count=capped_count,
                 )
             )
 
@@ -757,7 +757,9 @@ def _truncate_response(result: dict[str, Any]) -> dict[str, Any]:
     The Anthropic Connector Directory enforces a 25 000-token limit per tool
     result.  Using a conservative 3 chars-per-token estimate gives a
     75 000-character budget.  When the serialised JSON exceeds that budget
-    we trim list-valued fields from the end and append a truncation notice.
+    we trim list-valued fields from the end, then drop oversized dict-valued
+    fields (e.g. raw_parameters, raw FHIR metadata), and append a truncation
+    notice.
     """
     serialised = json.dumps(result, default=str)
     if len(serialised) <= MAX_RESPONSE_CHARS:
@@ -769,46 +771,103 @@ def _truncate_response(result: dict[str, Any]) -> dict[str, Any]:
         len(serialised),
     )
 
-    # Trim the largest list field until we fit.
     trimmed = dict(result)
-    notice = (
+    list_fields = [(k, v) for k, v in trimmed.items() if isinstance(v, list) and v]
+    dict_fields = [(k, v) for k, v in trimmed.items() if isinstance(v, dict) and v]
+    if not list_fields and not dict_fields:
+        return trimmed
+
+    trimmed["_truncated"] = True
+    trimmed["_truncation_notice"] = (
         "Response was truncated to stay within size limits. "
         "Use more specific parameters (e.g. filter, count, offset) to narrow results."
     )
-    # Find the largest list field by serialised size.
-    list_fields = [
-        (k, v) for k, v in trimmed.items() if isinstance(v, list) and v
-    ]
-    if not list_fields:
-        return trimmed
 
-    largest_key = max(list_fields, key=lambda kv: len(json.dumps(kv[1], default=str)))[0]
-    items = list(trimmed[largest_key])  # copy to avoid mutating the original
-    trimmed[largest_key] = items
-    trimmed["_truncated"] = True
-    trimmed["_truncation_notice"] = notice
-    while items and len(json.dumps(trimmed, default=str)) > MAX_RESPONSE_CHARS:
-        items.pop()
+    # Pass 1: trim the largest list field from the end until we fit.
+    if list_fields:
+        largest_key = max(list_fields, key=lambda kv: len(json.dumps(kv[1], default=str)))[0]
+        items = list(trimmed[largest_key])  # copy to avoid mutating the original
+        trimmed[largest_key] = items
+        # Drop a proportional chunk per iteration rather than one item at a
+        # time, so large responses don't need thousands of re-serialisations.
+        avg_item_size = max(1, len(json.dumps(items, default=str)) // len(items))
+        while items:
+            size = len(json.dumps(trimmed, default=str))
+            if size <= MAX_RESPONSE_CHARS:
+                break
+            drop = min(len(items), max(1, (size - MAX_RESPONSE_CHARS) // avg_item_size))
+            del items[-drop:]
+
+    # Pass 2: dict-valued fields can't be trimmed item by item — replace the
+    # largest with a removal marker until the response fits.
+    removed_keys: set[str] = set()
+    while len(json.dumps(trimmed, default=str)) > MAX_RESPONSE_CHARS:
+        dict_fields = [
+            (k, v)
+            for k, v in trimmed.items()
+            if isinstance(v, dict) and v and k not in removed_keys
+        ]
+        if not dict_fields:
+            break
+        largest_key = max(dict_fields, key=lambda kv: len(json.dumps(kv[1], default=str)))[0]
+        trimmed[largest_key] = {"_removed": "Field removed to stay within size limits."}
+        removed_keys.add(largest_key)
 
     return trimmed
+
+
+def _log_tool_error(
+    code: str,
+    exc: Exception,
+    *,
+    status_code: int | None = None,
+    exc_info: bool = False,
+) -> None:
+    """Log a tool failure with structured fields for the JSON log formatter."""
+    logger.error(
+        "Tool call failed [%s]: %s",
+        code,
+        exc,
+        exc_info=exc_info,
+        extra={
+            "error_code": code,
+            "error_type": type(exc).__name__,
+            "status_code": status_code,
+        },
+    )
 
 
 def _tool_guard(fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
     try:
         result = fn()
         return _truncate_response(result)
-    except SnowstormGuardError:
+    except SnowstormGuardError as exc:
+        logger.warning(
+            "Tool call blocked by guard: %s",
+            exc,
+            extra={"error_type": type(exc).__name__},
+        )
         raise
     except TerminologyNotFoundError as exc:
+        _log_tool_error("E_TARGET_SELECTION", exc)
         raise ValueError(f"[E_TARGET_SELECTION] {exc}") from exc
     except UnsupportedBackendError as exc:
+        _log_tool_error("E_UNSUPPORTED_CAPABILITY", exc)
         raise ValueError(f"[E_UNSUPPORTED_CAPABILITY] {exc}") from exc
     except HttpRequestError as exc:
         msg = str(exc)
         if "timed out" in msg.lower():
-            raise ValueError(f"[E_BACKEND_TIMEOUT] {msg}") from exc
-        if exc.status_code in {401, 403}:
-            raise ValueError(f"[E_BACKEND_AUTH] {msg}") from exc
-        if exc.status_code is not None:
-            raise ValueError(f"[E_BACKEND_HTTP] {msg}") from exc
-        raise ValueError(f"[E_BACKEND_REQUEST] {msg}") from exc
+            code = "E_BACKEND_TIMEOUT"
+        elif exc.status_code in {401, 403}:
+            code = "E_BACKEND_AUTH"
+        elif exc.status_code is not None:
+            code = "E_BACKEND_HTTP"
+        else:
+            code = "E_BACKEND_REQUEST"
+        _log_tool_error(code, exc, status_code=exc.status_code)
+        raise ValueError(f"[{code}] {msg}") from exc
+    except Exception as exc:
+        # Unexpected failure — log with traceback before FastMCP converts it
+        # into a generic error response.
+        _log_tool_error("E_INTERNAL", exc, exc_info=True)
+        raise
