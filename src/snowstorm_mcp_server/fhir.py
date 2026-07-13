@@ -12,9 +12,11 @@ class LookupResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     code: str
+    found: bool = True
     system: str | None = None
     version: str | None = None
     display: str | None = None
+    message: str | None = None
     raw_parameters: dict[str, list[Any]] = Field(default_factory=dict)
 
 
@@ -117,7 +119,23 @@ class SnomedLookupService:
         if version:
             params["version"] = version
         url = f"{self.target.fhir_base_url}/CodeSystem/$lookup"
-        data = self.client.request("GET", url, params=params, expect_json=True)
+        try:
+            data = self.client.request("GET", url, params=params, expect_json=True)
+        except HttpRequestError as exc:
+            # An unknown code is a normal negative answer to a lookup, not a
+            # tool failure — return a structured result instead of erroring.
+            if _looks_like_not_found_lookup_error(exc, str(exc)):
+                return LookupResult(
+                    code=code,
+                    found=False,
+                    system=system,
+                    version=version,
+                    message=(
+                        f"Code '{code}' was not found in this SNOMED CT edition/version. "
+                        "Verify the concept ID or search for the concept by term."
+                    ),
+                )
+            raise
         parsed = _parse_parameters_resource(data)
         return LookupResult(
             code=code,
@@ -272,20 +290,16 @@ class SnomedLookupService:
         system: str,
         version: str | None,
     ) -> ValidateCodeResult:
-        try:
-            result = self.lookup(code=code, system=system, version=version)
-        except HttpRequestError as exc:
-            message = str(exc)
-            if _looks_like_not_found_lookup_error(exc, message):
-                return ValidateCodeResult(
-                    code=code,
-                    result=False,
-                    system=system,
-                    version=version,
-                    message="Validation emulated via lookup fallback: code not found.",
-                    raw_parameters={},
-                )
-            raise
+        result = self.lookup(code=code, system=system, version=version)
+        if not result.found:
+            return ValidateCodeResult(
+                code=code,
+                result=False,
+                system=system,
+                version=version,
+                message="Validation emulated via lookup fallback: code not found.",
+                raw_parameters={},
+            )
         return ValidateCodeResult(
             code=code,
             result=True,

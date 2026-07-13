@@ -225,6 +225,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             "retrieving all synonyms and descriptions for a concept, "
             "checking whether a concept is active or inactive, "
             "or confirming the correct concept ID for a common attribute (e.g. finding site). "
+            "If the code does not exist, returns found=false with a message (not an error). "
             "NOT FOR: searching by text (use snomed_expand with a {{ term = \"...\" }} filter) or "
             "retrieving a concept set (use snomed_expand with ECL). "
             "Optionally specify terminology (e.g. 'snomedct-us') and/or target; "
@@ -682,8 +683,9 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             description=(
                 "Snowstorm-native concept search by term. "
                 "Optionally specify terminology and/or target; defaults to the server's default terminology. "
-                "Backend may reject very short terms; use at least 3 searchable characters "
-                "(letters/digits), e.g. prefer a longer phrase for acronyms."
+                "Terms need at least 3 searchable characters (letters/digits); shorter "
+                "terms return zero hits with a notice (not an error), e.g. prefer a "
+                "longer phrase for acronyms."
             ),
             annotations=_READ_ONLY_ANNOTATIONS,
             structured_output=True,

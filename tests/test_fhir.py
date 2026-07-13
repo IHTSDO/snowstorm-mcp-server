@@ -193,6 +193,59 @@ def test_expand_summary_mode_omits_contains_but_reports_raw_count() -> None:
     assert result.truncated is False
 
 
+def test_lookup_unknown_code_returns_found_false_not_error() -> None:
+    target = TargetConfig(base_url="http://test")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            404,
+            json={
+                "resourceType": "OperationOutcome",
+                "issue": [
+                    {
+                        "severity": "error",
+                        "code": "not-found",
+                        "diagnostics": "Code '99999999999' not found for system "
+                        "'http://snomed.info/sct'.",
+                    }
+                ],
+            },
+        )
+
+    with _make_service(target, handler) as svc:
+        result = svc.lookup(code="99999999999")
+
+    assert result.found is False
+    assert result.code == "99999999999"
+    assert result.display is None
+    assert result.message and "not found" in result.message.lower()
+
+
+def test_lookup_backend_failure_still_raises() -> None:
+    target = TargetConfig(base_url="http://test")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, text="service unavailable")
+
+    with _make_service(target, handler) as svc:
+        with pytest.raises(HttpRequestError):
+            svc.lookup(code="22298006")
+
+
+def test_lookup_known_code_reports_found_true() -> None:
+    target = TargetConfig(base_url="http://test")
+    payload = _load_json_fixture("live_contracts/fhir/codesystem_lookup_404684003_20251101.json")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
+
+    with _make_service(target, handler) as svc:
+        result = svc.lookup(code="404684003")
+
+    assert result.found is True
+    assert result.message is None
+
+
 def test_validate_code_falls_back_to_lookup_when_not_supported() -> None:
     target = TargetConfig(base_url="http://test")
     lookup_payload = _load_json_fixture("live_contracts/fhir/codesystem_lookup_404684003_20251101.json")
