@@ -259,9 +259,12 @@ class ExpansionSizeCache:
 
 
 def safe_count(requested: int, max_count: int) -> int:
-    """Enforce a hard ceiling on concepts returned per call."""
-    capped = min(requested, max_count)
-    if capped < requested:
+    """Enforce a hard ceiling on concepts returned per call.
+
+    Negative counts are clamped to 0 rather than passed through to the backend.
+    """
+    capped = max(0, min(requested, max_count))
+    if capped != requested:
         logger.info("Count capped from %d to %d", requested, capped)
     return capped
 

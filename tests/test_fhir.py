@@ -272,7 +272,20 @@ def test_validate_code_fallback_maps_lookup_not_found_to_false() -> None:
         if request.url.path.endswith("/CodeSystem/$validate-code"):
             return httpx.Response(400, text="OperationOutcome: not-supported")
         if request.url.path.endswith("/CodeSystem/$lookup"):
-            return httpx.Response(404, text="not found")
+            return httpx.Response(
+                404,
+                json={
+                    "resourceType": "OperationOutcome",
+                    "issue": [
+                        {
+                            "severity": "error",
+                            "code": "not-found",
+                            "diagnostics": "Code '999999999999999999' not found for "
+                            "system 'http://snomed.info/sct'.",
+                        }
+                    ],
+                },
+            )
         return httpx.Response(404)
 
     with _make_service(target, handler) as svc:
@@ -281,6 +294,67 @@ def test_validate_code_fallback_maps_lookup_not_found_to_false() -> None:
     assert result.result is False
     assert result.code == "999999999999999999"
     assert result.message and "lookup fallback" in result.message.lower()
+
+
+def test_lookup_unknown_code_system_400_raises_not_found_false() -> None:
+    """A 400 means the request was wrong (e.g. unknown code *system*), not that
+    the code is unknown — it must surface as an error, not found=false."""
+    target = TargetConfig(base_url="http://test")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            400,
+            json={
+                "resourceType": "OperationOutcome",
+                "issue": [
+                    {
+                        "severity": "error",
+                        "code": "not-found",
+                        "diagnostics": "Code system not found for parameters "
+                        "CodeSystemVersionParams{id='null', "
+                        "system='http://example.com/bogus', version='null'}.",
+                    }
+                ],
+            },
+        )
+
+    with _make_service(target, handler) as svc:
+        with pytest.raises(HttpRequestError):
+            svc.lookup(code="22298006", system="http://example.com/bogus")
+
+
+def test_lookup_misconfigured_base_path_404_raises_not_found_false() -> None:
+    """A 404 that does not name the code (e.g. wrong fhir_base_url, which 404s
+    on every path) must surface as an error rather than masquerade as a
+    'code not found' answer for every lookup."""
+    target = TargetConfig(base_url="http://test")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            404,
+            json={"timestamp": "2026-07-14T00:00:00Z", "status": 404, "error": "Not Found"},
+        )
+
+    with _make_service(target, handler) as svc:
+        with pytest.raises(HttpRequestError):
+            svc.lookup(code="22298006")
+
+
+def test_lookup_snowstorm_npe_500_maps_to_found_false() -> None:
+    """Some Snowstorm versions respond 500 with an NPE for unknown codes."""
+    target = TargetConfig(base_url="http://test")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            500,
+            json={"error": "NullPointerException", "message": '"concept" is null'},
+        )
+
+    with _make_service(target, handler) as svc:
+        result = svc.lookup(code="99999999999")
+
+    assert result.found is False
+    assert result.message and "not found" in result.message.lower()
 
 
 def test_expand_respects_server_reported_zero_offset() -> None:

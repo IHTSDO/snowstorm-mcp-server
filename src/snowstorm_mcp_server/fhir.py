@@ -124,7 +124,7 @@ class SnomedLookupService:
         except HttpRequestError as exc:
             # An unknown code is a normal negative answer to a lookup, not a
             # tool failure — return a structured result instead of erroring.
-            if _looks_like_not_found_lookup_error(exc, str(exc)):
+            if _is_code_not_found_response(exc, code):
                 return LookupResult(
                     code=code,
                     found=False,
@@ -329,16 +329,27 @@ def _as_int(value: Any) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
-def _looks_like_not_found_lookup_error(exc: HttpRequestError, message: str) -> bool:
-    msg = message.lower()
-    if exc.status_code in {400, 404}:
-        return True
+def _is_code_not_found_response(exc: HttpRequestError, code: str) -> bool:
+    """True only when the backend response identifies the looked-up *code* as
+    unknown.
+
+    Deliberately strict: a 400 (e.g. unknown code *system*), a 404 from a
+    misconfigured ``fhir_base_url`` (which 404s on every path), and other
+    backend failures must keep raising so they surface as errors instead of a
+    false "code not found" answer. Responses this check does not recognise
+    fall back to the error path, never to ``found=false``.
+    """
+    msg = str(exc).lower()
     if exc.status_code == 500 and (
         "concept\" is null" in msg
         or "concept is null" in msg
         or "nullpointerexception" in msg
     ):
+        # Snowstorm quirk: some versions respond 500 with an NPE for unknown codes.
         return True
-    if "not found" in msg:
-        return True
-    return False
+    if exc.status_code != 404:
+        return False
+    # Snowstorm's OperationOutcome diagnostics name the code:
+    #   "Code '12345' not found for system 'http://snomed.info/sct'."
+    # A 404 from a wrong base path never mentions the code.
+    return f"code '{code.lower()}'" in msg and "not found" in msg

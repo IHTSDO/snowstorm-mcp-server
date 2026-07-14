@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import atexit
 import json
 import logging
 import os
@@ -32,6 +33,10 @@ _READ_ONLY_ANNOTATIONS = ToolAnnotations(
 def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
     app_config = load_config(config_path)
     runtime = ServerRuntime(app_config)
+    # Close the runtime's pooled per-target HTTP clients on shutdown. atexit
+    # covers both transports (stdio and streamable-http) without depending on
+    # a specific server lifecycle hook.
+    atexit.register(runtime.close)
     server_mode = app_config.server_mode
     guards = QueryGuards(
         rate_limit_calls=app_config.guards.rate_limit_calls,

@@ -296,6 +296,9 @@ class TestSafeCount:
     def test_over_limit(self):
         assert safe_count(1000, 500) == 500
 
+    def test_negative_clamped_to_zero(self):
+        assert safe_count(-5, 500) == 0
+
 
 # ── inject_large_result_advisory ───────────────────────────────────────
 
