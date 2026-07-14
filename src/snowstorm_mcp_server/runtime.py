@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from typing import Any
 
 from .capabilities import probe_target
@@ -8,7 +9,16 @@ from .config import AppConfig, TargetConfig
 from .fhir import SnomedLookupService
 from .http_client import HttpClient
 from .snowstorm_native import SnowstormNativeService
-from .terminology import TerminologyInfo, TerminologyRegistry, build_registry
+from .terminology import (
+    TerminologyInfo,
+    TerminologyNotFoundError,
+    TerminologyRegistry,
+    build_registry,
+)
+
+# Minimum delay between re-discovery attempts for targets whose terminology
+# discovery failed at startup, so a down backend is not hammered on every call.
+DISCOVERY_RETRY_INTERVAL_SECONDS = 30.0
 
 
 class UnsupportedBackendError(ValueError):
@@ -24,6 +34,8 @@ class ServerRuntime:
         # per request. httpx.Client is thread-safe.
         self._clients: dict[str, HttpClient] = {}
         self._clients_lock = threading.Lock()
+        self._discovery_retry_lock = threading.Lock()
+        self._last_discovery_retry = float("-inf")
 
     def _client_for(self, target_cfg: TargetConfig) -> HttpClient:
         key = target_cfg.name or target_cfg.base_url
@@ -40,7 +52,35 @@ class ServerRuntime:
                 client.close()
             self._clients.clear()
 
+    def _retry_pending_discovery(self) -> bool:
+        """Re-attempt discovery for targets that failed at startup (throttled).
+
+        Returns True if a retry ran and registered at least one terminology.
+        """
+        if not self.registry.has_pending_discovery():
+            return False
+        with self._discovery_retry_lock:
+            now = time.monotonic()
+            if now - self._last_discovery_retry < DISCOVERY_RETRY_INTERVAL_SECONDS:
+                return False
+            self._last_discovery_retry = now
+            return self.registry.retry_pending_discovery()
+
     def _resolve(
+        self,
+        terminology: str | None,
+        target_name: str | None = None,
+    ) -> tuple[TerminologyInfo, TargetConfig]:
+        try:
+            return self._resolve_once(terminology, target_name)
+        except TerminologyNotFoundError:
+            # The terminology may be missing because the backend was
+            # unreachable at startup; retry discovery once and resolve again.
+            if not self._retry_pending_discovery():
+                raise
+            return self._resolve_once(terminology, target_name)
+
+    def _resolve_once(
         self,
         terminology: str | None,
         target_name: str | None = None,
@@ -56,6 +96,7 @@ class ServerRuntime:
         return info, target_cfg
 
     def list_terminologies(self) -> list[dict[str, Any]]:
+        self._retry_pending_discovery()
         return [
             {
                 "name": t.name,

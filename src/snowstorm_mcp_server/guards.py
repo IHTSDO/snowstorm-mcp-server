@@ -47,13 +47,13 @@ class SnowstormRateLimitError(SnowstormGuardError):
 # Adding a new root concept here automatically generates wildcard, dotted-
 # notation, and bare-expansion blocked patterns — no regex duplication needed.
 
-_EXPENSIVE_ROOTS: dict[str, tuple[str, str]] = {
-    # concept_id: (label, approximate_count)
-    "404684003": ("all clinical findings", "~350,000 concepts"),
-    "71388002": ("all procedures", "~100,000 concepts"),
-    "105590001": ("all substances", "~70,000 concepts"),
-    "123037004": ("all body structures", "~40,000 concepts"),
-    "138875005": ("SNOMED CT root", "~500,000 concepts"),
+_EXPENSIVE_ROOTS: dict[str, tuple[str, str, str]] = {
+    # concept_id: (label, approximate_count, narrower_example)
+    "404684003": ("all clinical findings", "~350,000 concepts", "<<50043002 for respiratory disorders"),
+    "71388002": ("all procedures", "~100,000 concepts", "<<387713003 for surgical procedures"),
+    "105590001": ("all substances", "~70,000 concepts", "<<410942007 for drugs and medicaments"),
+    "123037004": ("all body structures", "~40,000 concepts", "<<80891009 for heart structures"),
+    "138875005": ("SNOMED CT root", "~500,000 concepts", "<<64572001 for diseases"),
 }
 
 # Alternation of all expensive root IDs for use in combined regex patterns.
@@ -77,7 +77,7 @@ def _build_blocked_patterns() -> list[tuple[re.Pattern[str], str]]:
             "<<X:{attr=(<<A MINUS <<B)} rather than (<<X:attr=<<A) MINUS (<<X:attr=<<B).",
         ),
     ]
-    for cid, (label, count) in _EXPENSIVE_ROOTS.items():
+    for cid, (label, count, example) in _EXPENSIVE_ROOTS.items():
         # Full wildcard attribute query
         patterns.append((
             re.compile(rf"<<\s*{cid}\s*:\s*\*\s*=\s*\*"),
@@ -94,7 +94,7 @@ def _build_blocked_patterns() -> list[tuple[re.Pattern[str], str]]:
         patterns.append((
             re.compile(rf"^http://snomed\.info/sct\?fhir_vs=ecl/<<\s*{cid}\s*$"),
             f"Bare <<{cid} ({label}, {count}) is too broad. "
-            f"Narrow to a subhierarchy first.",
+            f"Narrow to a subhierarchy first (e.g. {example}).",
         ))
     return patterns
 
