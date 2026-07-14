@@ -1,0 +1,27 @@
+{
+  "name": "snomed-international",
+  "owner": {
+    "name": "SNOMED International",
+    "url": "https://www.snomed.org"
+  },
+  "metadata": {
+    "description": "SNOMED International plugins for Claude.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "snowstorm-mcp-server",
+      "source": "./",
+      "description": "Query SNOMED CT clinical terminology via Snowstorm and Snowstorm Lite backends. Lookup, search, validation, hierarchy navigation, and value set expansion across all SNOMED CT editions.",
+      "version": "1.0.0",
+      "category": "healthcare",
+      "keywords": [
+        "snomed",
+        "snomed-ct",
+        "clinical-terminology",
+        "fhir",
+        "snowstorm"
+      ]
+    }
+  ]
+}

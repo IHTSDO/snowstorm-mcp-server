@@ -85,7 +85,7 @@ def test_runtime_snomed_expand_delegates_and_adds_terminology(monkeypatch) -> No
     monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
 
     class _StubFhirService:
-        def __init__(self, _target) -> None:
+        def __init__(self, _target, *, client=None) -> None:
             self.target = _target
 
         def __enter__(self):
@@ -130,7 +130,7 @@ def test_runtime_snowstorm_list_versions_delegates(monkeypatch) -> None:
     monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
 
     class _StubNativeService:
-        def __init__(self, _target) -> None:
+        def __init__(self, _target, *, client=None) -> None:
             self.target = _target
 
         def __enter__(self):
@@ -206,7 +206,7 @@ def test_runtime_search_limit_is_capped_by_config(monkeypatch) -> None:
     monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
 
     class _StubNativeService:
-        def __init__(self, _target) -> None:
+        def __init__(self, _target, *, client=None) -> None:
             self.target = _target
 
         def __enter__(self):

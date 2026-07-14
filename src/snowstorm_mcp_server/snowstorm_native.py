@@ -32,6 +32,7 @@ class ConceptSearchResult(BaseModel):
     total_elements: int | None = None
     returned: int
     hits: list[ConceptSearchHit] = Field(default_factory=list)
+    notice: str | None = None
 
 
 class ConceptDetail(BaseModel):
@@ -110,15 +111,25 @@ class SnowstormNativeService:
         limit: int = 10,
         active_only: bool = True,
     ) -> ConceptSearchResult:
+        branch_path = branch.strip("/") or "MAIN"
         searchable_len = _searchable_term_length(term)
         if searchable_len < self.MIN_SEARCH_TERM_LENGTH:
-            raise ValueError(
-                "Snowstorm native concept search requires a term of at least "
-                f"{self.MIN_SEARCH_TERM_LENGTH} searchable characters "
-                f"(letters/digits) after normalization; got {searchable_len} for {term!r}. "
-                "Use a longer term/phrase (for acronyms, include context) or another tool."
+            # A too-short term is normal model behaviour (clinical acronyms like
+            # "MI"), not a tool failure — return zero hits with guidance instead
+            # of raising, so directory metrics only count real failures.
+            return ConceptSearchResult(
+                term=term,
+                branch=branch_path,
+                limit=limit,
+                returned=0,
+                hits=[],
+                notice=(
+                    "Snowstorm native concept search requires a term of at least "
+                    f"{self.MIN_SEARCH_TERM_LENGTH} searchable characters "
+                    f"(letters/digits) after normalization; got {searchable_len} for {term!r}. "
+                    "Use a longer term/phrase (for acronyms, include context) or another tool."
+                ),
             )
-        branch_path = branch.strip("/") or "MAIN"
         url = f"{self.target.base_url}/browser/{branch_path}/descriptions"
         raw_limit = max(1, min(limit * 4, 100))  # over-fetch then dedupe/filter
         params = {

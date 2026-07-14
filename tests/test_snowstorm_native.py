@@ -29,11 +29,16 @@ def _load_json_fixture(path: str) -> dict:
     return json.loads(fixture_path.read_text(encoding="utf-8"))
 
 
-def test_snowstorm_native_search_rejects_short_term_with_clear_message() -> None:
+def test_snowstorm_native_search_short_term_returns_notice_not_error() -> None:
     target = TargetConfig(base_url="http://localhost:8080")
-    with SnowstormNativeService(target, client=_StubClient()) as svc:
-        with pytest.raises(ValueError, match="at least 3 searchable characters"):
-            svc.search_concepts(term="AD")
+    stub = _StubClient()
+    with SnowstormNativeService(target, client=stub) as svc:
+        result = svc.search_concepts(term="AD")
+
+    assert result.returned == 0
+    assert result.hits == []
+    assert result.notice and "at least 3 searchable characters" in result.notice
+    assert stub.called is False, "short terms must not hit the backend"
 
 
 def test_snowstorm_native_search_allows_three_char_term_before_backend_call() -> None:

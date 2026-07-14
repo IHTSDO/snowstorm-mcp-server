@@ -11,5 +11,6 @@ __pycache__/
 snomed_index/
 data/
 eval-results/
-uv.lock
+
 .vscode
+.claude/

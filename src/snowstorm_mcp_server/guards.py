@@ -157,6 +157,11 @@ class RollingRateLimiter:
             if len(self._timestamps) >= self.max_calls:
                 oldest = self._timestamps[0]
                 retry_in = int(self.window_seconds - (now - oldest)) + 1
+                logger.warning(
+                    "Rate limit reached: %d calls in %ds window",
+                    self.max_calls,
+                    self.window_seconds,
+                )
                 raise SnowstormRateLimitError(
                     f"[E_RATE_LIMIT] Rate limit reached: maximum {self.max_calls} "
                     f"Snowstorm queries per {self.window_seconds}s. "
@@ -254,9 +259,12 @@ class ExpansionSizeCache:
 
 
 def safe_count(requested: int, max_count: int) -> int:
-    """Enforce a hard ceiling on concepts returned per call."""
-    capped = min(requested, max_count)
-    if capped < requested:
+    """Enforce a hard ceiling on concepts returned per call.
+
+    Negative counts are clamped to 0 rather than passed through to the backend.
+    """
+    capped = max(0, min(requested, max_count))
+    if capped != requested:
         logger.info("Count capped from %d to %d", requested, capped)
     return capped
 
@@ -305,6 +313,11 @@ class ChildrenCallTracker:
                 self._calls.popleft()
             self._calls.append(now)
             if len(self._calls) > self.max_calls_per_minute:
+                logger.warning(
+                    "Recursive hierarchy traversal detected: %d calls in 60s (concept %s)",
+                    len(self._calls),
+                    concept_id,
+                )
                 raise SnowstormGuardError(
                     f"[E_RECURSIVE_TRAVERSAL] snomed_get_children/ancestors/descendants "
                     f"called {len(self._calls)} times in 60s — this looks like a "
@@ -417,10 +430,14 @@ class QueryGuards:
             result, self.large_result_threshold, returned_count, summary_only
         )
 
-    def pre_hierarchy(self, concept_id: str, session: object | None = None) -> None:
-        """Run pre-call guards for hierarchy tools (children/ancestors/descendants)."""
+    def pre_hierarchy(self, concept_id: str, count: int, session: object | None = None) -> int:
+        """Run pre-call guards for hierarchy tools (children/ancestors/descendants).
+
+        Returns the capped count.
+        """
         self._children_tracker.check(concept_id)
         self._consume_request_budget(session)
+        return safe_count(count, self.max_count_per_call)
 
     def pre_lookup(self, session: object | None = None) -> None:
         """Run pre-call guards for single-concept lookup and search tools."""
@@ -451,6 +468,11 @@ class QueryGuards:
             total = fetch_total()
             self._size_cache.set(cache_key, total)
         if total > self._expansion_threshold:
+            logger.warning(
+                "Expansion blocked by size guard: %d concepts (threshold %d)",
+                total,
+                self._expansion_threshold,
+            )
             raise SnowstormGuardError(
                 f"[E_QUERY_BLOCKED] This expansion contains {total:,} concepts, "
                 f"which exceeds the server limit of {self._expansion_threshold:,}. "
