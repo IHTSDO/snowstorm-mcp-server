@@ -56,14 +56,33 @@ docker run -p 8000:8000 \
 
 For production, deploy behind an HTTPS reverse proxy or on a platform
 with automatic TLS (Cloud Run, Fly.io, Railway, etc.). For public-facing
-deployments, configure rate limiting at both the reverse proxy (IP-based)
-and the application level (per-session) — see [Performance guards](#performance-guards) below.
+deployments, configure **per-client** rate limiting at the reverse proxy
+(IP-based). MCP 2026-07-28 removed protocol-level sessions, so the
+application-level per-session limit no longer applies to HTTP clients; the
+global limit still caps total backend load — see
+[Performance guards](#performance-guards) below.
 
 For remote MCP connector deployments intended for Claude web/desktop, the
 server enables CORS for `https://claude.ai` and `https://claude.com` on the
 Streamable HTTP endpoint by default. Override the allowed origin list with
 the `SNOWSTORM_MCP_CORS_ALLOW_ORIGINS` environment variable if needed
 using a comma-separated list.
+
+Set `SNOWSTORM_MCP_ALLOWED_HOSTS` to the hostnames the server is reached on
+(comma-separated, e.g. `mcp.example.org,mcp.example.org:443`) to enable DNS
+rebinding protection: a request whose `Origin` is present but not in the CORS
+allow list is rejected with HTTP 403, and an unrecognised `Host` with HTTP 421.
+This is off by default because an incomplete host list rejects all traffic. It
+is enabled automatically when binding to localhost.
+
+### MCP protocol versions
+
+The server is dual-era: it serves the stateless
+[MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28)
+revision and the older handshake-based revisions (`2025-11-25` and earlier)
+from the same endpoint, so existing clients keep working. It runs stateless in
+both cases and never mints an `Mcp-Session-Id`, which means it can be scaled
+horizontally without session affinity.
 
 ### Remote connector notes
 
@@ -152,13 +171,15 @@ Tool failures carry structured fields (`error_code`, `error_type`,
 Use `--log-format text` for the traditional human-readable output during
 local development.
 
-**SSE / Streamable HTTP** (for HTTP-based MCP clients):
+**Streamable HTTP** (for HTTP-based MCP clients):
 
 ```bash
-uv run snowstorm-mcp-server --transport sse
-# or
 uv run snowstorm-mcp-server --transport streamable-http
 ```
+
+The standalone `sse` transport was removed in favour of Streamable HTTP. The
+HTTP+SSE transport has been deprecated since MCP `2025-03-26` and is formally
+Deprecated under the feature lifecycle policy as of `2026-07-28`.
 
 **Claude Desktop config example** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 
@@ -212,7 +233,9 @@ response_limits:
   max_synonyms: 25
 
 # Guards — all values shown are defaults. Omit the block to use defaults.
-# For public-facing deployments, set per_session_rate_limit_calls.
+# For public-facing HTTP deployments, do per-client limiting at the reverse
+# proxy: MCP 2026-07-28 removed sessions, so per_session_rate_limit_calls
+# only has an effect on stdio.
 # guards:
 #   rate_limit_calls: 10
 #   rate_limit_window_seconds: 60
@@ -220,7 +243,7 @@ response_limits:
 #   max_count_per_call: 500
 #   large_result_threshold: 1000
 #   max_children_calls_per_minute: 5
-#   per_session_rate_limit_calls: null   # set an integer to enable
+#   per_session_rate_limit_calls: null   # stdio only; no effect over HTTP
 #   block_zero_cardinality_on_large_sets: false  # set true to block [0..0] on top-level roots
 #   enable_expansion_size_guard: false   # preflight summary check for any non-summary expansion
 #   expansion_count_threshold: 20000     # block if total concepts exceeds this value
@@ -469,27 +492,31 @@ Guards that are always active:
 > processes behind a load balancer, each process enforces its own independent limits.
 > For shared limits across processes, a Redis-backed implementation is needed.
 
-### Per-session rate limiting
+### Per-session rate limiting (stdio only)
 
-By default, the global rate limit is shared across all connected sessions. One
-active session can exhaust the budget for everyone else. For public-facing
-deployments, enable per-session limiting:
+> **MCP 2026-07-28 removed protocol-level sessions.** Over Streamable HTTP every
+> request now stands alone, so `per_session_rate_limit_calls` has nothing stable
+> to key on and will never trigger — each request gets a fresh, empty window.
+> The server logs a warning at startup if you set it. It still works on stdio,
+> where one process serves exactly one client. **For HTTP deployments, do
+> per-client limiting at the reverse proxy instead** (Nginx `limit_req`, Caddy
+> `rate_limit`, Cloudflare, etc.), which keys on network identity the protocol
+> no longer carries.
+
+The global rate limit is shared across all callers and is unaffected — it
+remains the control that caps total backend load:
 
 ```yaml
 guards:
-  rate_limit_calls: 30            # global ceiling across all sessions
+  rate_limit_calls: 30            # global ceiling across all callers
   rate_limit_window_seconds: 60
-  per_session_rate_limit_calls: 8 # no single session can exhaust the global budget
+  per_session_rate_limit_calls: 8 # stdio only; a no-op over HTTP
 ```
 
-When `per_session_rate_limit_calls` is set, each MCP session gets its own
+When `per_session_rate_limit_calls` is set, each session gets its own
 independent rolling window using the same `rate_limit_window_seconds`. Sessions
 are tracked by object identity and are dropped automatically when the underlying
 session object is garbage-collected.
-
-This limits the blast radius of a single heavy user but does not prevent
-abuse via repeated reconnects. For that, add IP-based rate limiting at your
-reverse proxy (Nginx `limit_req`, Caddy `rate_limit`, Cloudflare, etc.).
 
 ### Unguarded tools
 

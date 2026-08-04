@@ -181,14 +181,27 @@ class TestServerModeToolRegistration:
 
 class TestToolAnnotations:
     def test_all_tools_have_read_only_annotations(self, mcp):
-        """Every registered tool must carry readOnlyHint=True, destructiveHint=False."""
+        """Every registered tool must carry read_only_hint=True, destructive_hint=False.
+
+        The SDK exposes these as snake_case attributes since mcp 2.0; the JSON
+        wire format is still camelCase via Pydantic aliases.
+        """
         tools = mcp._tool_manager._tools.values()
         assert len(list(tools)) > 0, "No tools registered"
         for tool in tools:
             ann = tool.annotations
             assert ann is not None, f"Tool {tool.name!r} is missing annotations"
-            assert ann.readOnlyHint is True, f"Tool {tool.name!r}: readOnlyHint should be True"
-            assert ann.destructiveHint is False, f"Tool {tool.name!r}: destructiveHint should be False"
+            assert ann.read_only_hint is True, f"Tool {tool.name!r}: read_only_hint should be True"
+            assert ann.destructive_hint is False, (
+                f"Tool {tool.name!r}: destructive_hint should be False"
+            )
+
+    def test_all_tools_have_title_and_short_name(self, mcp):
+        """Connector Directory review requires a title on every tool, name <= 64 chars."""
+        tools = mcp._tool_manager._tools.values()
+        for tool in tools:
+            assert tool.title, f"Tool {tool.name!r} is missing a title"
+            assert len(tool.name) <= 64, f"Tool {tool.name!r} exceeds the 64-character limit"
 
 
 class TestResponseTruncation:

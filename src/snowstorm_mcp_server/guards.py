@@ -186,8 +186,17 @@ class PerSessionRateLimiter:
     The check-and-record operation is fully atomic — the per-session lock
     is held while calling into the inner ``RollingRateLimiter``.
 
-    One instance per MCP server process. For multi-process deployments,
-    swap in a Redis-backed equivalent keyed by session ID.
+    .. warning::
+       This only constrains anything where a session actually spans multiple
+       calls — that is, stdio. MCP 2026-07-28 removed protocol-level sessions,
+       so over Streamable HTTP every request gets a fresh session object and
+       therefore its own empty bucket, making this limiter a no-op. The
+       protocol deliberately offers no client identity to key on, and request
+       headers are client-supplied and must not be treated as identity
+       assertions. Per-client limiting for HTTP deployments belongs at the
+       reverse proxy, keyed on network identity. The global
+       ``rate_limit_calls`` limiter is unaffected and remains the real
+       protection for the backend.
     """
 
     def __init__(self, max_calls: int, window_seconds: int) -> None:
