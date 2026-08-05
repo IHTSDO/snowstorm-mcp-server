@@ -163,11 +163,40 @@ def test_get_on_mcp_endpoint_is_rejected(monkeypatch) -> None:
     app = _build_streamable_http_asgi(str(CONFIG_PATH))
 
     with TestClient(app) as client:
-        assert client.get("/mcp").status_code == 405
+        response = client.get("/mcp")
+        assert response.status_code == 405
+        # RFC 9110 15.5.6: a 405 MUST carry Allow.
+        assert response.headers["allow"] == "POST"
         # DELETE terminated a session pre-2026-07-28; the SDK already refuses it.
         assert client.delete("/mcp").status_code == 405
         # The favicon route shares the app and must keep serving GET.
         assert client.get("/favicon.ico").status_code == 200
+
+
+def test_get_on_mcp_endpoint_is_rejected_under_mount(monkeypatch) -> None:
+    """The GET block must survive a sub-path deployment.
+
+    scope["path"] carries the mount prefix, so matching on it directly stops
+    working behind `--root-path /api` or a Starlette Mount, and the request falls
+    through to the SDK. Under uvicorn that opens the standalone SSE stream, which
+    never terminates.
+
+    The parent deliberately does not propagate the child's lifespan: the session
+    manager then refuses to serve, so a regression fails fast here instead of
+    hanging the suite on an SSE stream that never closes. Do not "fix" that by
+    wiring the lifespan through.
+    """
+    from starlette.applications import Starlette
+    from starlette.routing import Mount
+
+    monkeypatch.setenv("FASTMCP_HOST", "0.0.0.0")
+    inner = _build_streamable_http_asgi(str(CONFIG_PATH))
+    mounted = Starlette(routes=[Mount("/api", app=inner)])
+
+    with TestClient(mounted) as client:
+        response = client.get("/api/mcp", headers={"Accept": "text/event-stream"})
+        assert response.status_code == 405
+        assert response.headers["allow"] == "POST"
 
 
 def test_dns_rebinding_protection_is_off_by_default(monkeypatch) -> None:
