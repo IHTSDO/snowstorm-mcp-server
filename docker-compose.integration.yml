@@ -8,19 +8,44 @@ services:
       node.name: snowstorm
       cluster.name: snowstorm-cluster
       ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms2g -Xmx2g}
+      # Without this, a host disk above the 90% high watermark makes Elasticsearch
+      # refuse to allocate shards. Snowstorm creates its indices anyway, their
+      # shards go unassigned, the cluster turns red, and Snowstorm dies on a 30s
+      # query timeout — leaving indices with EMPTY MAPPINGS behind. Those survive
+      # in the volume, so every later RF2 import fails with "all shards failed"
+      # and no amount of restarting recovers it; the volume has to be removed.
+      # This is a disposable single-node test cluster, so the decider only costs
+      # us that failure mode.
+      cluster.routing.allocation.disk.threshold_enabled: "false"
     volumes:
       - snowstorm_mcp_es_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:9200"]
+      # A bare GET on :9200 answers 200 while shards are still recovering. That
+      # makes no difference on a clean volume (an empty cluster is instantly
+      # green), but it matters on a restart with data, where the 27 Snowstorm
+      # indices take time to recover and dependants would otherwise start
+      # against a red cluster. timeout must exceed the wait_for_status timeout.
+      # Output is deliberately not discarded — it lands in
+      # `docker inspect --format '{{json .State.Health}}'`.
+      test:
+        - CMD-SHELL
+        - curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=10s'
+      # Each probe now blocks up to 10s before failing, so keep retries low or a
+      # genuinely broken cluster hangs `up` for many minutes with no output.
+      start_period: 30s
       interval: 5s
-      timeout: 3s
-      retries: 60
+      timeout: 15s
+      retries: 20
     ports:
       - "127.0.0.1:9200:9200"
 
   snowstorm:
     image: snomedinternational/snowstorm:latest
     container_name: snowstorm-mcp-snowstorm
+    # Snowstorm exits rather than retrying if an Elasticsearch call times out
+    # during startup. Nothing upstream can fully rule that out, so let it come
+    # back on its own instead of leaving a half-initialised stack behind.
+    restart: on-failure
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -38,9 +63,29 @@ services:
     ports:
       - "8080:8080"
 
+  # /app/lucene-index does not exist in the snowstorm-lite image, so Docker
+  # creates the mount point root-owned while the image runs as UID 1000 (see
+  # `docker image inspect snomedinternational/snowstorm-lite:latest
+  # --format '{{.Config.User}}'`). Without this the very first start fails with
+  # AccessDeniedException: /app/lucene-index/data. Compose restarts one-shot
+  # services, so this re-runs on every `up`; it is idempotent and takes
+  # milliseconds (Lucene keeps few, large segment files). Keeps Lite non-root.
+  # NOTE: the 1000 is tied to that image's Config.User — if the tag moves to a
+  # base image with a different runtime UID, this must be updated to match.
+  snowstorm-lite-init:
+    image: alpine:3.22
+    container_name: snowstorm-mcp-snowstorm-lite-init
+    network_mode: none
+    command: chown -R 1000:1000 /app/lucene-index
+    volumes:
+      - snowstorm_mcp_lite_index:/app/lucene-index
+
   snowstorm-lite:
     image: snomedinternational/snowstorm-lite:latest
     container_name: snowstorm-mcp-snowstorm-lite
+    depends_on:
+      snowstorm-lite-init:
+        condition: service_completed_successfully
     command:
       - --index.path=lucene-index/data
       - --admin.password=${SNOWSTORM_LITE_ADMIN_PASSWORD:-snowstorm-lite-admin}
