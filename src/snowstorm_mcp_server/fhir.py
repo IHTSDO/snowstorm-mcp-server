@@ -1,11 +1,35 @@
 from __future__ import annotations
 
+import html
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from .config import TargetConfig
 from .http_client import HttpClient, HttpRequestError
+
+_ECL_MARKER = "fhir_vs=ecl/"
+
+
+def unescape_ecl(value_set_url: str) -> str:
+    """Undo HTML entity escaping in the ECL segment of an implicit ValueSet URL.
+
+    Some clients HTML-escape tool arguments before sending them, so ECL arrives
+    as ``&lt;&lt;73211009`` (or the numeric ``&#60;&#60;73211009``) where the
+    backend requires ``<<73211009``. Passed through verbatim, Snowstorm fails to
+    parse it and answers with an ECLException surfaced as an HTTP 500.
+
+    Only the segment after ``fhir_vs=ecl/`` is unescaped. Running unescape over
+    the whole URL could rewrite an ``&amp;`` separating query parameters and
+    change their structure. ECL itself has no ``&`` operator — conjunction is
+    ``AND`` or ``,`` — so there is nothing in a valid expression for this to
+    corrupt.
+    """
+    marker_at = value_set_url.find(_ECL_MARKER)
+    if marker_at == -1:
+        return value_set_url
+    split_at = marker_at + len(_ECL_MARKER)
+    return value_set_url[:split_at] + html.unescape(value_set_url[split_at:])
 
 
 class LookupResult(BaseModel):
@@ -220,6 +244,7 @@ class SnomedLookupService:
             raise ValueError("max_contains must be >= 1")
 
         resolved_url = (value_set_url or "").strip() or self.DEFAULT_IMPLICIT_SNOMED_VALUESET_URL
+        resolved_url = unescape_ecl(resolved_url)
         params: dict[str, Any] = {
             "url": resolved_url,
             "offset": offset,

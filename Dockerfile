@@ -22,7 +22,16 @@ EXPOSE 8000
 
 USER appuser
 
+# A TCP connect proves only that the kernel is accepting on the port — the
+# backlog fills from the kernel side, so a wedged or swap-thrashing process
+# still passes while serving nothing. This performs a real HTTP round-trip
+# through the ASGI app, so the event loop has to be alive to answer it.
+#
+# It deliberately does not call an MCP method. Under the stateful session
+# manager a tools/list would need an initialize handshake, and that would mint
+# a session on every probe — 2,880 a day at this interval — feeding the very
+# retention problem a healthcheck is meant to catch.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import socket; s=socket.create_connection(('localhost',8000),timeout=3); s.close()" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/favicon.ico', timeout=3).read()" || exit 1
 
 CMD ["snowstorm-mcp-server", "--transport", "streamable-http"]

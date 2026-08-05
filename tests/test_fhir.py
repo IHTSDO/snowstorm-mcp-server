@@ -463,3 +463,72 @@ def test_expand_no_fuzzy_does_not_append_tilde() -> None:
         svc.expand(filter="myocardial", fuzzy=False)
 
     assert seen["query"]["filter"] == "myocardial"
+
+
+@pytest.mark.parametrize(
+    ("escaped", "expected"),
+    [
+        # Named entities — the common case in the wild.
+        (
+            "http://snomed.info/sct?fhir_vs=ecl/&lt;&lt;1052201004",
+            "http://snomed.info/sct?fhir_vs=ecl/<<1052201004",
+        ),
+        # Numeric entities.
+        (
+            "http://snomed.info/sct?fhir_vs=ecl/&#60;&#60;773603001",
+            "http://snomed.info/sct?fhir_vs=ecl/<<773603001",
+        ),
+        # Refinement: both the focus concept and the attribute value are escaped.
+        (
+            "http://snomed.info/sct?fhir_vs=ecl/&lt;&lt;64156001:363698007=&lt;&lt;87003004",
+            "http://snomed.info/sct?fhir_vs=ecl/<<64156001:363698007=<<87003004",
+        ),
+        # Already correct — must be left exactly as-is.
+        (
+            "http://snomed.info/sct?fhir_vs=ecl/<<38341003",
+            "http://snomed.info/sct?fhir_vs=ecl/<<38341003",
+        ),
+        # No ECL segment at all — untouched.
+        ("http://snomed.info/sct?fhir_vs", "http://snomed.info/sct?fhir_vs"),
+    ],
+)
+def test_expand_unescapes_html_escaped_ecl(escaped: str, expected: str) -> None:
+    """Clients that HTML-escape arguments send ECL the backend cannot parse.
+
+    Passed through verbatim these produce an ECLException surfaced as a 500, so
+    the escaping is undone before dispatch.
+    """
+    target = TargetConfig(base_url="http://test")
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = dict(request.url.params).get("url")
+        return httpx.Response(
+            200,
+            json={"resourceType": "ValueSet", "expansion": {"total": 0, "contains": []}},
+        )
+
+    with _make_service(target, handler) as svc:
+        svc.expand(value_set_url=escaped)
+
+    assert seen["url"] == expected
+
+
+def test_expand_does_not_rewrite_ampersands_outside_the_ecl_segment() -> None:
+    """Unescaping must not touch query-parameter structure ahead of the ECL."""
+    target = TargetConfig(base_url="http://test")
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = dict(request.url.params).get("url")
+        return httpx.Response(
+            200,
+            json={"resourceType": "ValueSet", "expansion": {"total": 0, "contains": []}},
+        )
+
+    url = "http://snomed.info/sct?version=x&amp;y&fhir_vs=ecl/&lt;&lt;73211009"
+    with _make_service(target, handler) as svc:
+        svc.expand(value_set_url=url)
+
+    # The &amp; before the ECL marker survives; only the ECL tail is unescaped.
+    assert seen["url"] == "http://snomed.info/sct?version=x&amp;y&fhir_vs=ecl/<<73211009"
