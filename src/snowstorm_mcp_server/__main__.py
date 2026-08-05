@@ -110,16 +110,27 @@ def _reject_get_on_mcp_endpoint(asgi_app):
     no resources, prompts or subscriptions — so that stream never carries a
     message and refusing it costs nothing. Other paths (notably /favicon.ico)
     are untouched.
+
+    Matching uses get_route_path, not scope["path"]. ASGI's scope["path"] is the
+    full request path including any mount prefix, so behind `--root-path /api` or
+    a Starlette Mount it reads "/api/mcp" and a naive comparison against "/mcp"
+    silently stops matching — reopening the unbounded SSE stream this exists to
+    close, while 405-ing a "/mcp" that no longer routes anywhere.
     """
     from starlette.responses import PlainTextResponse
+    from starlette.routing import get_route_path
 
     async def wrapped(scope, receive, send):
         if (
             scope["type"] == "http"
             and scope.get("method") == "GET"
-            and scope.get("path", "").rstrip("/") == STREAMABLE_HTTP_PATH
+            and get_route_path(scope).rstrip("/") == STREAMABLE_HTTP_PATH
         ):
-            await PlainTextResponse("Method Not Allowed", status_code=405)(scope, receive, send)
+            # RFC 9110 15.5.6: a 405 MUST carry Allow.
+            response = PlainTextResponse(
+                "Method Not Allowed", status_code=405, headers={"Allow": "POST"}
+            )
+            await response(scope, receive, send)
             return
         await asgi_app(scope, receive, send)
 
