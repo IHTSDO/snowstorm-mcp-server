@@ -11,6 +11,7 @@ from typing import Any
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.server import CacheableMethod, CacheHint
 from mcp.types import ToolAnnotations
+from starlette.requests import ClientDisconnect
 
 from .config import load_config
 from .guards import QueryGuards, SnowstormGuardError
@@ -882,6 +883,13 @@ def _tool_guard(fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
     try:
         result = fn()
         return _truncate_response(result)
+    except ClientDisconnect:
+        # The caller hung up mid-request. That is ordinary client behaviour, not
+        # a server fault, and it is common enough to bury real errors: logging it
+        # at ERROR with a traceback produced hundreds of spurious entries per
+        # week. Record it without one and let it propagate.
+        logger.info("Client disconnected before the tool call completed")
+        raise
     except SnowstormGuardError as exc:
         logger.warning(
             "Tool call blocked by guard: %s",

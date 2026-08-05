@@ -41,8 +41,14 @@ Build and run the container:
 
 ```bash
 docker build -t snowstorm-mcp-server .
-docker run -p 8000:8000 snowstorm-mcp-server
+docker run -p 8000:8000 --memory=512m --restart=unless-stopped snowstorm-mcp-server
 ```
+
+Set `--memory`. Without a cgroup limit the container can grow until the
+kernel's global OOM killer fires, and that picks the largest process on the
+host — so a fault in this server takes the box down instead of just the
+container. With a limit, the container is killed alone and `--restart`
+brings it straight back.
 
 The server starts in Streamable HTTP mode on port 8000 using the
 bundled `config.docker-snowstorm.yaml` (expects a local Snowstorm at

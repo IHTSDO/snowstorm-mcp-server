@@ -691,3 +691,31 @@ class TestExpansionPreflightConcurrency:
         _call_tool(app, "snomed_expand", {"value_set_url": "http://snomed.info/sct?fhir_vs=ecl/<<195967001"})
         with pytest.raises(SnowstormRateLimitError):
             _call_tool(app, "snomed_expand", {"value_set_url": "http://snomed.info/sct?fhir_vs=ecl/<<50043002"})
+
+
+def test_client_disconnect_is_not_logged_as_an_internal_error(caplog) -> None:
+    """A caller hanging up mid-request is normal, not a server fault.
+
+    It was being caught by the catch-all handler and logged at ERROR with a
+    traceback, which produced hundreds of spurious entries a week and made real
+    failures hard to find.
+    """
+    import logging
+
+    from starlette.requests import ClientDisconnect
+
+    from snowstorm_mcp_server.mcp_app import _tool_guard
+
+    def hang_up() -> dict:
+        raise ClientDisconnect("client went away")
+
+    with caplog.at_level(logging.INFO, logger="snowstorm_mcp_server.mcp_app"):
+        with pytest.raises(ClientDisconnect):
+            _tool_guard(hang_up)
+
+    records = [r for r in caplog.records if r.name == "snowstorm_mcp_server.mcp_app"]
+    assert records, "the disconnect should still be recorded"
+    assert [r.levelno for r in records] == [logging.INFO]
+    # No traceback, and not tagged as an internal error.
+    assert records[0].exc_info is None
+    assert getattr(records[0], "error_code", None) != "E_INTERNAL"
