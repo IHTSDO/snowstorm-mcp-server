@@ -67,7 +67,7 @@ async def test_guard_blocks_bare_clinical_finding() -> None:
                 "snomed_expand",
                 {"value_set_url": f"http://snomed.info/sct?fhir_vs=ecl/<<{CLINICAL_FINDING}"},
             )
-            assert result.isError is True
+            assert result.is_error is True
             error_text = result.content[0].text
             assert "E_QUERY_BLOCKED" in error_text
             assert "too broad" in error_text.lower()
@@ -89,7 +89,7 @@ async def test_guard_blocks_bare_procedure() -> None:
                 "snomed_expand",
                 {"value_set_url": f"http://snomed.info/sct?fhir_vs=ecl/<<{PROCEDURE}"},
             )
-            assert result.isError is True
+            assert result.is_error is True
             error_text = result.content[0].text
             assert "E_QUERY_BLOCKED" in error_text
             assert "too broad" in error_text.lower()
@@ -109,7 +109,7 @@ async def test_guard_blocks_bare_substance() -> None:
                 "snomed_expand",
                 {"value_set_url": f"http://snomed.info/sct?fhir_vs=ecl/<<{SUBSTANCE}"},
             )
-            assert result.isError is True
+            assert result.is_error is True
             error_text = result.content[0].text
             assert "E_QUERY_BLOCKED" in error_text
             assert "too broad" in error_text.lower()
@@ -129,7 +129,7 @@ async def test_guard_blocks_history_supplement() -> None:
                 "snomed_expand",
                 {"value_set_url": f"http://snomed.info/sct?fhir_vs=ecl/<<{ASTHMA} {{{{+ HISTORY}}}}"},
             )
-            assert result.isError is True
+            assert result.is_error is True
             error_text = result.content[0].text
             assert "E_QUERY_BLOCKED" in error_text
             assert "History supplements" in error_text
@@ -150,7 +150,7 @@ async def test_guard_blocks_wildcard_on_clinical_finding() -> None:
                 "snomed_expand",
                 {"value_set_url": f"http://snomed.info/sct?fhir_vs=ecl/<<{CLINICAL_FINDING}:*=*"},
             )
-            assert result.isError is True
+            assert result.is_error is True
             error_text = result.content[0].text
             assert "E_QUERY_BLOCKED" in error_text
             assert "wildcard" in error_text.lower()
@@ -176,7 +176,7 @@ async def test_guard_blocks_top_level_minus() -> None:
                     ),
                 },
             )
-            assert result.isError is True
+            assert result.is_error is True
             error_text = result.content[0].text
             assert "E_QUERY_BLOCKED" in error_text
             assert "MINUS" in error_text
@@ -203,8 +203,8 @@ async def test_guard_allows_scoped_query() -> None:
                     "summary_only": True,
                 },
             )
-            assert result.isError is False
-            payload = result.structuredContent
+            assert result.is_error is False
+            payload = result.structured_content
             assert payload["total"] > 0
 
 
@@ -225,8 +225,8 @@ async def test_guard_allows_constrained_clinical_finding() -> None:
                     "summary_only": True,
                 },
             )
-            assert result.isError is False
-            payload = result.structuredContent
+            assert result.is_error is False
+            payload = result.structured_content
             assert payload["total"] > 0
 
 
@@ -251,8 +251,8 @@ async def test_guard_caps_count() -> None:
                     "summary_only": False,
                 },
             )
-            assert result.isError is False
-            payload = result.structuredContent
+            assert result.is_error is False
+            payload = result.structured_content
             # Should succeed, and returned items should not exceed the cap
             assert payload["returned"] <= 500
 
@@ -278,8 +278,8 @@ async def test_guard_injects_large_result_advisory() -> None:
                     "summary_only": False,
                 },
             )
-            assert result.isError is False
-            payload = result.structuredContent
+            assert result.is_error is False
+            payload = result.structured_content
             assert payload["total"] > 1000
             assert "_guard_advisory" in payload
             assert "large" in payload["_guard_advisory"].lower()
@@ -301,8 +301,8 @@ async def test_guard_no_advisory_on_summary_only() -> None:
                     "summary_only": True,
                 },
             )
-            assert result.isError is False
-            payload = result.structuredContent
+            assert result.is_error is False
+            payload = result.structured_content
             assert payload["total"] > 1000
             assert "_guard_advisory" not in payload
 

@@ -39,7 +39,7 @@ def _server_mode() -> str:
 async def _call_tool(session: ClientSession, name: str, arguments: dict) -> CallToolResult:
     result = await session.call_tool(name, arguments)
     assert isinstance(result, CallToolResult)
-    assert result.isError is False, f"{name} failed: {result}"
+    assert result.is_error is False, f"{name} failed: {result}"
     return result
 
 
@@ -83,13 +83,13 @@ async def test_mcp_stdio_lists_terminologies_and_capabilities() -> None:
                 } <= tool_names
 
             list_result = await _call_tool(session, "list_terminologies", {})
-            terminologies = list_result.structuredContent["terminologies"]
+            terminologies = list_result.structured_content["terminologies"]
             terminology_names = {t["name"] for t in terminologies}
             assert len(terminology_names) >= 1
 
             # Use the default terminology (auto-discovered from Snowstorm)
             cap_result = await _call_tool(session, "server_capabilities", {})
-            payload = cap_result.structuredContent
+            payload = cap_result.structured_content
             assert "terminology" in payload
             assert payload["capabilities"]["has_fhir"] is True
             assert payload["backend_type"] in {"snowstorm", "lite", "unknown"}
@@ -99,7 +99,7 @@ async def test_mcp_stdio_lists_terminologies_and_capabilities() -> None:
                 "fhir_metadata",
                 {"include_raw": False},
             )
-            meta_payload = meta_summary.structuredContent
+            meta_payload = meta_summary.structured_content
             assert "summary" in meta_payload
             assert "metadata" not in meta_payload
             assert meta_payload["summary"]["resourceType"] == "CapabilityStatement"
@@ -118,7 +118,7 @@ async def test_mcp_stdio_snomed_lookup_live() -> None:
                 "snomed_lookup",
                 {"code": clinical_finding_code},
             )
-            payload = result.structuredContent
+            payload = result.structured_content
             assert "terminology" in payload
             assert payload["code"] == clinical_finding_code
             assert "clinical finding" in (payload.get("display") or "").lower()
@@ -140,7 +140,7 @@ async def test_mcp_stdio_validate_code_and_subsumes_live() -> None:
                 "snomed_validate_code",
                 {"code": clinical_finding_code},
             )
-            valid_payload = valid.structuredContent
+            valid_payload = valid.structured_content
             assert valid_payload["result"] is True
             assert valid_payload["code"] == clinical_finding_code
 
@@ -149,7 +149,7 @@ async def test_mcp_stdio_validate_code_and_subsumes_live() -> None:
                 "snomed_subsumes",
                 {"code_a": mi_code, "code_b": ami_code},
             )
-            rel_payload = rel.structuredContent
+            rel_payload = rel.structured_content
             assert rel_payload["outcome"] in {"subsumes", "equivalent"}, f"{mi_desc} vs {ami_desc}"
 
 
@@ -165,7 +165,7 @@ async def test_mcp_stdio_snomed_expand_live() -> None:
                 "snomed_expand",
                 {"filter": "myocard", "count": 5, "summary_only": True},
             )
-            payload = result.structuredContent
+            payload = result.structured_content
             assert "terminology" in payload
             assert payload["summary_only"] is True
             assert payload["count"] == 5
@@ -183,7 +183,7 @@ async def test_mcp_stdio_snowstorm_list_codesystems_and_versions_live() -> None:
             await session.initialize()
 
             cs = await _call_tool(session, "snowstorm_list_codesystems", {})
-            cs_payload = cs.structuredContent
+            cs_payload = cs.structured_content
             assert "terminology" in cs_payload
             short_names = {item["short_name"] for item in cs_payload.get("code_systems", [])}
             assert "SNOMEDCT" in short_names
@@ -193,7 +193,7 @@ async def test_mcp_stdio_snowstorm_list_codesystems_and_versions_live() -> None:
                 "snowstorm_list_versions",
                 {"code_system_short_name": "SNOMEDCT"},
             )
-            versions_payload = versions.structuredContent
+            versions_payload = versions.structured_content
             version_values = {
                 v.get("version") or v.get("effective_date")
                 for v in versions_payload.get("versions", [])
@@ -217,8 +217,8 @@ async def test_mcp_stdio_snowstorm_search_concepts_live() -> None:
                 "snowstorm_search_concepts",
                 {"term": "myocardial infarction", "limit": 10},
             )
-            assert search_ok.isError is False, f"search failed: {search_ok}"
-            payload = search_ok.structuredContent or {}
+            assert search_ok.is_error is False, f"search failed: {search_ok}"
+            payload = search_ok.structured_content or {}
             assert "terminology" in payload
             concept_ids = {hit["concept_id"] for hit in payload.get("hits", [])}
             assert mi_code in concept_ids, mi_desc
@@ -239,8 +239,8 @@ async def test_mcp_stdio_snowstorm_get_concept_native_live() -> None:
                 "snowstorm_get_concept_native",
                 {"concept_id": mi_code, "max_synonyms": 20},
             )
-            assert detail.isError is False, f"detail failed: {detail}"
-            payload = detail.structuredContent or {}
+            assert detail.is_error is False, f"detail failed: {detail}"
+            payload = detail.structured_content or {}
             assert payload["concept_id"] == mi_code
             assert payload["semantic_tag"] == "disorder"
             assert any("heart attack" in s.lower() for s in payload.get("synonyms", []))

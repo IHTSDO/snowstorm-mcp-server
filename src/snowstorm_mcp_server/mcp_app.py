@@ -3,12 +3,13 @@ from __future__ import annotations
 import atexit
 import json
 import logging
-import os
 from collections.abc import Callable
+from importlib.metadata import PackageNotFoundError, version as _dist_version
 from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.mcpserver.server import CacheableMethod, CacheHint
 from mcp.types import ToolAnnotations
 
 from .config import load_config
@@ -22,15 +23,35 @@ logger = logging.getLogger(__name__)
 MAX_RESPONSE_CHARS = 75_000
 
 
+# MCP 2026-07-28 requires ttlMs/cacheScope on tools/list and server/discover
+# results. The tool set here is fixed at startup and identical for every caller
+# — there is no per-user variation and no listChanged notification to invalidate
+# it — so it is safe for shared intermediaries to cache. The SDK default is
+# ttl_ms=0 / "private", which would make clients re-list on every conversation.
+_STATIC_LIST_CACHE_HINT = CacheHint(ttl_ms=3_600_000, scope="public")
+_CACHE_HINTS: dict[CacheableMethod, CacheHint] = {
+    "tools/list": _STATIC_LIST_CACHE_HINT,
+    "server/discover": _STATIC_LIST_CACHE_HINT,
+}
+
+
+def _package_version() -> str:
+    """Installed distribution version, or "" when running from an unbuilt tree."""
+    try:
+        return _dist_version("snowstorm-mcp-server")
+    except PackageNotFoundError:  # pragma: no cover - only when not pip-installed
+        return ""
+
+
 _READ_ONLY_ANNOTATIONS = ToolAnnotations(
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 
 
-def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
+def create_mcp_app(config_path: str | Path | None = None) -> MCPServer:
     app_config = load_config(config_path)
     runtime = ServerRuntime(app_config)
     # Close the runtime's pooled per-target HTTP clients on shutdown. atexit
@@ -64,6 +85,15 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
         g.block_zero_cardinality_on_large_sets,
         g.enable_expansion_size_guard, g.expansion_count_threshold,
     )
+    if g.per_session_rate_limit_calls is not None:
+        logger.warning(
+            "per_session_rate_limit_calls=%d is configured, but MCP 2026-07-28 "
+            "removed protocol-level sessions: over Streamable HTTP every request "
+            "gets its own session and this limit will never trigger. It still "
+            "applies on stdio. Enforce per-client limits at the reverse proxy; "
+            "rate_limit_calls=%d still caps total backend load.",
+            g.per_session_rate_limit_calls, g.rate_limit_calls,
+        )
 
     _ecl_guidance = (
         "\n\nTOOL SELECTION GUIDE:\n"
@@ -139,11 +169,14 @@ def create_mcp_app(config_path: str | Path | None = None) -> FastMCP:
             + _ecl_guidance
         )
 
-    mcp = FastMCP(
+    # Host/port are no longer constructor settings under the v2 SDK — they are
+    # passed to streamable_http_app()/run() by __main__. The version is sent to
+    # clients as serverInfo in every result's _meta under MCP 2026-07-28.
+    mcp = MCPServer(
         server_name,
-        host=os.environ.get("FASTMCP_HOST", "127.0.0.1"),
-        port=int(os.environ.get("FASTMCP_PORT", "8000")),
         instructions=instructions,
+        version=_package_version(),
+        cache_hints=_CACHE_HINTS,
     )
 
     @mcp.tool(
