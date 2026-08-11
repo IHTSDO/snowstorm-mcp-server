@@ -74,12 +74,42 @@ Streamable HTTP endpoint by default. Override the allowed origin list with
 the `SNOWSTORM_MCP_CORS_ALLOW_ORIGINS` environment variable if needed
 using a comma-separated list.
 
+**Origin validation is on by default.** A request to the MCP endpoint whose
+`Origin` header is present but not in the allow list is rejected with HTTP 403.
+This is what prevents DNS rebinding: a rebound page's POST still carries its
+real origin, because browsers attach `Origin` to every POST — including
+same-origin ones — per the
+[Fetch Standard](https://fetch.spec.whatwg.org/#origin-header). Requests with
+no `Origin` at all, which is every non-browser MCP client, are unaffected.
+
+That holds for all current browser engines. Firefox before 103 (July 2022)
+could omit `Origin` entirely rather than sending `null`, notably when the
+`network.http.sendOriginHeader` pref was disabled; set
+`SNOWSTORM_MCP_ALLOWED_HOSTS` as well if such clients are in scope.
+
+The allow list defaults to the CORS origins above. Override it independently
+with `SNOWSTORM_MCP_ALLOWED_ORIGINS` (comma-separated) for same-origin
+deployments behind a reverse proxy, where CORS is off but browser POSTs still
+carry an `Origin`. It **replaces** the list rather than adding to it, so
+include every browser origin you serve — setting it to only your own domain
+locks out `https://claude.ai`. Setting it to `*` disables the app-level check;
+note that if `SNOWSTORM_MCP_ALLOWED_HOSTS` is also set, the SDK layer still
+validates `Origin` against the CORS list.
+
+> **Upgrading:** browser clients whose page origin is not in the allow list now
+> receive 403 where they previously succeeded — **regardless of CORS settings**.
+> CORS never rejected these requests; it only withheld response headers, and
+> same-origin reads were never CORS-gated at all. A self-hosted deployment
+> serving its own web UI must set `SNOWSTORM_MCP_ALLOWED_ORIGINS` to that
+> origin, or to `*` to restore the previous behaviour. Non-browser clients send
+> no `Origin` and are unaffected.
+
 Set `SNOWSTORM_MCP_ALLOWED_HOSTS` to the hostnames the server is reached on
-(comma-separated, e.g. `mcp.example.org,mcp.example.org:443`) to enable DNS
-rebinding protection: a request whose `Origin` is present but not in the CORS
-allow list is rejected with HTTP 403, and an unrecognised `Host` with HTTP 421.
-This is off by default because an incomplete host list rejects all traffic. It
-is enabled automatically when binding to localhost.
+(comma-separated, e.g. `mcp.example.org,mcp.example.org:443`) to additionally
+reject an unrecognised `Host` with HTTP 421. This stays off by default because
+an incomplete host list rejects all traffic; it is enabled automatically when
+binding to localhost. It is defence in depth — `Origin` validation above
+already closes the rebinding vector on this POST-only endpoint.
 
 ### MCP protocol versions
 

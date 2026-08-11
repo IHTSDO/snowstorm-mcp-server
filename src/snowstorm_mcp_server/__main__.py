@@ -75,6 +75,85 @@ def _cors_allow_origins() -> list[str]:
     return [item.strip() for item in raw_value.split(",") if item.strip()]
 
 
+def _security_allowed_origins(cors_allow_origins: list[str]) -> list[str] | None:
+    """Origin allow list for the anti-DNS-rebinding check; None disables it.
+
+    Defaults to the CORS allow list: an origin that cannot pass CORS cannot
+    read responses anyway, so rejecting it outright breaks no legitimate
+    browser client. SNOWSTORM_MCP_ALLOWED_ORIGINS overrides the list without
+    touching CORS (e.g. same-origin deployments behind a reverse proxy, where
+    CORS is off but browser POSTs still carry an Origin). It replaces the list
+    rather than extending it. A literal "*" disables the app-level check; the
+    SDK-level check still runs if SNOWSTORM_MCP_ALLOWED_HOSTS is set, matching
+    Origin against the CORS list.
+
+    Note the empty case is deliberate and fail-closed: SNOWSTORM_MCP_CORS_ALLOW_ORIGINS=""
+    with no override yields an empty list, so every request carrying any Origin
+    is rejected. Operators disabling CORS on a browser-facing deployment must
+    set this variable.
+    """
+    raw_value = os.environ.get("SNOWSTORM_MCP_ALLOWED_ORIGINS")
+    if raw_value is None:
+        return list(cors_allow_origins)
+    items = [item.strip() for item in raw_value.split(",") if item.strip()]
+    if "*" in items:
+        return None
+    return items
+
+
+def _reject_untrusted_origin(asgi_app, allowed_origins: list[str]):
+    """403 requests to the MCP endpoint whose Origin is present but not allowed.
+
+    The MCP transport spec requires servers to validate Origin to prevent DNS
+    rebinding. The SDK couples that check to Host validation behind one flag,
+    and its Host matcher has no full wildcard — so with an unknowable public
+    hostname (a container binding 0.0.0.0) the SDK check cannot be enabled
+    without an operator-supplied host list, and historically it was simply off.
+
+    Origin alone is sufficient here: the endpoint is POST-only (GET is 405'd
+    below), browsers append Origin to every POST — including the same-origin
+    POSTs a rebound page issues, where it names the attacker's own origin —
+    and non-browser clients send no Origin and pass untouched. Matching
+    mirrors the SDK: exact values plus "scheme://host:*" port wildcards.
+
+    Origin: null (sandboxed iframe, no-referrer policy, cross-origin redirect)
+    is a present-but-unlisted value and so is rejected, which is the safe
+    outcome. Firefox before 103 could omit the header entirely instead; those
+    clients need SNOWSTORM_MCP_ALLOWED_HOSTS to be covered.
+    """
+    from starlette.responses import PlainTextResponse
+    from starlette.routing import get_route_path
+
+    def _origin_allowed(origin: str) -> bool:
+        if origin in allowed_origins:
+            return True
+        return any(
+            allowed.endswith(":*") and origin.startswith(allowed[:-2] + ":")
+            for allowed in allowed_origins
+        )
+
+    async def wrapped(scope, receive, send):
+        if (
+            scope["type"] == "http"
+            and get_route_path(scope).rstrip("/") == STREAMABLE_HTTP_PATH
+        ):
+            origin = next(
+                (
+                    value.decode("latin-1")
+                    for name, value in scope.get("headers", [])
+                    if name == b"origin"
+                ),
+                None,
+            )
+            if origin is not None and not _origin_allowed(origin):
+                response = PlainTextResponse("Invalid Origin header", status_code=403)
+                await response(scope, receive, send)
+                return
+        await asgi_app(scope, receive, send)
+
+    return wrapped
+
+
 def _transport_security(allow_origins: list[str]):
     """DNS-rebinding protection, opt-in via SNOWSTORM_MCP_ALLOWED_HOSTS.
 
@@ -142,6 +221,18 @@ def _build_streamable_http_asgi(config_path: str | None):
 
     app = create_mcp_app(config_path)
     allow_origins = _cors_allow_origins()
+    security_origins = _security_allowed_origins(allow_origins)
+    bind_host = os.environ.get("FASTMCP_HOST", "127.0.0.1")
+    if bind_host not in ("127.0.0.1", "localhost", "::1") and not os.environ.get(
+        "SNOWSTORM_MCP_ALLOWED_HOSTS"
+    ):
+        logging.getLogger(__name__).warning(
+            "Bound to %s without SNOWSTORM_MCP_ALLOWED_HOSTS: Host-header "
+            "validation is off. Origin validation still protects browser "
+            "traffic; set SNOWSTORM_MCP_ALLOWED_HOSTS to the public hostnames "
+            "for defence in depth.",
+            bind_host,
+        )
     # stateless_http only governs the legacy (2025-era handshake) path: requests
     # carrying a modern MCP-Protocol-Version are routed to the stateless handler
     # by the SDK regardless. Enabling it keeps older clients from pinning
@@ -151,10 +242,17 @@ def _build_streamable_http_asgi(config_path: str | None):
         app.streamable_http_app(
             streamable_http_path=STREAMABLE_HTTP_PATH,
             stateless_http=True,
-            host=os.environ.get("FASTMCP_HOST", "127.0.0.1"),
-            transport_security=_transport_security(allow_origins),
+            host=bind_host,
+            # The SDK check validates Origin against this list too, so feed it
+            # the same list the app-level check uses (falling back to the CORS
+            # list when the origin check is disabled with "*").
+            transport_security=_transport_security(
+                security_origins if security_origins is not None else allow_origins
+            ),
         )
     )
+    if security_origins is not None:
+        asgi_app = _reject_untrusted_origin(asgi_app, security_origins)
     if not allow_origins:
         return asgi_app
 
