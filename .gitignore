@@ -14,3 +14,8 @@ eval-results/
 
 .vscode
 .claude/
+
+# Host-specific operational runbooks. This is a public repo — deployment notes
+# naming internal hosts, filesystem paths or proxy topology belong in internal
+# docs, not here. Generic deployment guidance goes in README.md.
+docs/redeploy.md
