@@ -199,14 +199,149 @@ def test_get_on_mcp_endpoint_is_rejected_under_mount(monkeypatch) -> None:
         assert response.headers["allow"] == "POST"
 
 
-def test_dns_rebinding_protection_is_off_by_default(monkeypatch) -> None:
-    """Unset SNOWSTORM_MCP_ALLOWED_HOSTS must not change behaviour."""
+def test_origin_validation_is_on_by_default(monkeypatch) -> None:
+    """A present-but-untrusted Origin is rejected even with no env vars set.
+
+    Under DNS rebinding the browser issues what it believes is a same-origin
+    POST, which still carries the attacker page's Origin — so this check alone
+    closes the rebinding hole on a POST-only endpoint. No-Origin requests
+    (every non-browser client) and CORS-allowed origins pass.
+    """
+    monkeypatch.setenv("FASTMCP_HOST", "0.0.0.0")
+    monkeypatch.delenv("SNOWSTORM_MCP_ALLOWED_HOSTS", raising=False)
+    monkeypatch.delenv("SNOWSTORM_MCP_ALLOWED_ORIGINS", raising=False)
+    app = _build_streamable_http_asgi(str(CONFIG_PATH))
+
+    with TestClient(app) as client:
+        assert _modern_tools_list(client).status_code == 200
+        assert _modern_tools_list(client, origin="https://claude.ai").status_code == 200
+        assert _modern_tools_list(client, origin="https://evil.example").status_code == 403
+
+
+def test_origin_validation_star_opt_out(monkeypatch) -> None:
+    """SNOWSTORM_MCP_ALLOWED_ORIGINS='*' restores the old permissive behaviour."""
+    monkeypatch.setenv("FASTMCP_HOST", "0.0.0.0")
+    monkeypatch.delenv("SNOWSTORM_MCP_ALLOWED_HOSTS", raising=False)
+    monkeypatch.setenv("SNOWSTORM_MCP_ALLOWED_ORIGINS", "*")
+    app = _build_streamable_http_asgi(str(CONFIG_PATH))
+
+    with TestClient(app) as client:
+        assert _modern_tools_list(client, origin="https://evil.example").status_code == 200
+
+
+def test_origin_validation_decoupled_from_cors(monkeypatch) -> None:
+    """SNOWSTORM_MCP_ALLOWED_ORIGINS works when CORS is disabled entirely."""
+    monkeypatch.setenv("FASTMCP_HOST", "0.0.0.0")
+    monkeypatch.setenv("SNOWSTORM_MCP_CORS_ALLOW_ORIGINS", "")
+    monkeypatch.setenv("SNOWSTORM_MCP_ALLOWED_ORIGINS", "https://intranet.example")
+    app = _build_streamable_http_asgi(str(CONFIG_PATH))
+
+    with TestClient(app) as client:
+        assert _modern_tools_list(client, origin="https://intranet.example").status_code == 200
+        assert _modern_tools_list(client, origin="https://evil.example").status_code == 403
+
+
+def test_empty_cors_list_fails_closed(monkeypatch) -> None:
+    """Disabling CORS without an override rejects every browser client.
+
+    An empty CORS list leaves the origin allow list empty, so any request
+    carrying an Origin is refused. That is the documented breaking change, and
+    it is deliberate: failing open here would silently drop the protection for
+    exactly the same-origin proxy deployments that cannot rely on CORS.
+    """
+    monkeypatch.setenv("FASTMCP_HOST", "0.0.0.0")
+    monkeypatch.setenv("SNOWSTORM_MCP_CORS_ALLOW_ORIGINS", "")
+    monkeypatch.delenv("SNOWSTORM_MCP_ALLOWED_ORIGINS", raising=False)
+    monkeypatch.delenv("SNOWSTORM_MCP_ALLOWED_HOSTS", raising=False)
+    app = _build_streamable_http_asgi(str(CONFIG_PATH))
+
+    with TestClient(app) as client:
+        assert _modern_tools_list(client, origin="https://claude.ai").status_code == 403
+        # Non-browser clients send no Origin and keep working regardless.
+        assert _modern_tools_list(client).status_code == 200
+
+
+def test_origin_port_wildcard_is_honoured(monkeypatch) -> None:
+    """A "scheme://host:*" entry accepts any port on that host, and only that host."""
+    monkeypatch.setenv("FASTMCP_HOST", "0.0.0.0")
+    monkeypatch.setenv("SNOWSTORM_MCP_ALLOWED_ORIGINS", "http://localhost:*")
+    monkeypatch.delenv("SNOWSTORM_MCP_ALLOWED_HOSTS", raising=False)
+    app = _build_streamable_http_asgi(str(CONFIG_PATH))
+
+    with TestClient(app) as client:
+        assert _modern_tools_list(client, origin="http://localhost:3000").status_code == 200
+        assert _modern_tools_list(client, origin="http://localhost:8080").status_code == 200
+        # A different host is not covered by the wildcard.
+        assert _modern_tools_list(client, origin="http://evil.example:3000").status_code == 403
+        # Nor is the bare origin with no port, which the SDK matcher also rejects.
+        assert _modern_tools_list(client, origin="http://localhost").status_code == 403
+
+
+def test_origin_validation_survives_a_mount(monkeypatch) -> None:
+    """The origin check must keep matching behind a mount prefix.
+
+    Same trap as the GET guard: scope["path"] carries the prefix, so matching on
+    it directly stops working under `--root-path` or a Starlette Mount and the
+    check silently passes everything through. The lifespan is deliberately not
+    propagated — see test_get_on_mcp_endpoint_is_rejected_under_mount.
+    """
+    from starlette.applications import Starlette
+    from starlette.routing import Mount
+
+    monkeypatch.setenv("FASTMCP_HOST", "0.0.0.0")
+    monkeypatch.delenv("SNOWSTORM_MCP_ALLOWED_ORIGINS", raising=False)
+    monkeypatch.delenv("SNOWSTORM_MCP_ALLOWED_HOSTS", raising=False)
+    inner = _build_streamable_http_asgi(str(CONFIG_PATH))
+    mounted = Starlette(routes=[Mount("/api", app=inner)])
+
+    with TestClient(mounted) as client:
+        response = client.post(
+            "/api/mcp",
+            headers={
+                "Origin": "https://evil.example",
+                "Accept": "application/json, text/event-stream",
+                "Content-Type": "application/json",
+                "MCP-Protocol-Version": MODERN_PROTOCOL_VERSION,
+                "Mcp-Method": "tools/list",
+            },
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list",
+                "params": {"_meta": MODERN_META},
+            },
+        )
+        assert response.status_code == 403
+
+
+def test_host_validation_is_off_by_default(monkeypatch) -> None:
+    """Unset SNOWSTORM_MCP_ALLOWED_HOSTS must not reject foreign Host headers.
+
+    Host validation needs the deployment's public hostnames, which the server
+    cannot guess; an incomplete list would 421 all traffic, so it stays opt-in.
+    """
     monkeypatch.setenv("FASTMCP_HOST", "0.0.0.0")
     monkeypatch.delenv("SNOWSTORM_MCP_ALLOWED_HOSTS", raising=False)
     app = _build_streamable_http_asgi(str(CONFIG_PATH))
 
     with TestClient(app) as client:
-        assert _modern_tools_list(client, origin="https://evil.example").status_code == 200
+        response = client.post(
+            "/mcp",
+            headers={
+                "Host": "attacker.example",
+                "Accept": "application/json, text/event-stream",
+                "Content-Type": "application/json",
+                "MCP-Protocol-Version": MODERN_PROTOCOL_VERSION,
+                "Mcp-Method": "tools/list",
+            },
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list",
+                "params": {"_meta": MODERN_META},
+            },
+        )
+        assert response.status_code == 200
 
 
 def test_allowed_hosts_rejects_foreign_origin_and_host(monkeypatch) -> None:
