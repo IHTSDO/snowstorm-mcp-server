@@ -225,3 +225,17 @@ def test_snowstorm_native_get_concept_keeps_identical_translation_with_its_langu
         ("et", "Aspergillus fumigatus"),
     ]
     assert detail.raw_description_count == 4
+
+
+@pytest.mark.parametrize("accept_language", [None, "et-X-71000181105,en"])
+def test_snowstorm_native_sends_accept_language_only_when_set(accept_language) -> None:
+    target = TargetConfig(base_url="http://localhost:8080")
+    stub = _StubClient()
+    expected = {"Accept-Language": accept_language} if accept_language else None
+
+    with SnowstormNativeService(target, client=stub) as svc:
+        svc.search_concepts(term="suhkurtõbi", accept_language=accept_language)
+        stub.next_response = {"conceptId": "73211009"}
+        svc.get_concept(concept_id="73211009", accept_language=accept_language)
+
+    assert [kwargs["headers"] for _args, kwargs in stub.calls] == [expected, expected]

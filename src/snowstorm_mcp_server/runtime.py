@@ -289,7 +289,11 @@ class ServerRuntime:
         applied_limit = min(limit, self.config.response_limits.max_search_hits)
         with SnowstormNativeService(target_cfg, client=self._client_for(target_cfg)) as svc:
             result = svc.search_concepts(
-                term=term, branch=branch, limit=applied_limit, active_only=active_only,
+                term=term,
+                branch=branch,
+                limit=applied_limit,
+                active_only=active_only,
+                accept_language=info.accept_language,
             )
         return {"terminology": info.name, **result.model_dump()}
 
@@ -312,6 +316,7 @@ class ServerRuntime:
                 branch=branch,
                 include_synonyms=include_synonyms,
                 max_synonyms=applied_max_synonyms,
+                accept_language=info.accept_language,
             )
         return {"terminology": info.name, **result.model_dump()}
 
