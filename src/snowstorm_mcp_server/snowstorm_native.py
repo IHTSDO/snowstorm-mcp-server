@@ -35,6 +35,14 @@ class ConceptSearchResult(BaseModel):
     notice: str | None = None
 
 
+class DescriptionSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    term: str
+    lang: str | None = None
+    type: str | None = None
+
+
 class ConceptDetail(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -47,6 +55,10 @@ class ConceptDetail(BaseModel):
     module_id: str | None = None
     effective_time: str | None = None
     synonyms: list[str] = Field(default_factory=list)
+    # Active synonyms tagged with their language. Extensions often translate a
+    # term to an identical string (Latin organism names, eponyms), which the
+    # case-folded ``synonyms`` list collapses into the English entry.
+    descriptions: list[DescriptionSummary] = Field(default_factory=list)
     raw_description_count: int | None = None
 
 
@@ -110,6 +122,7 @@ class SnowstormNativeService:
         branch: str = "MAIN",
         limit: int = 10,
         active_only: bool = True,
+        accept_language: str | None = None,
     ) -> ConceptSearchResult:
         branch_path = branch.strip("/") or "MAIN"
         searchable_len = _searchable_term_length(term)
@@ -137,7 +150,9 @@ class SnowstormNativeService:
             "active": "true" if active_only else "false",
             "limit": str(raw_limit),
         }
-        data = self.client.request("GET", url, params=params, expect_json=True)
+        data = self.client.request(
+            "GET", url, params=params, headers=_language_headers(accept_language), expect_json=True,
+        )
         items = data.get("items", [])
         # Snowstorm returns description-level results ranked by Elasticsearch.
         # We deduplicate by concept (keeping the first/highest-ranked occurrence)
@@ -194,16 +209,21 @@ class SnowstormNativeService:
         branch: str = "MAIN",
         include_synonyms: bool = True,
         max_synonyms: int = 15,
+        accept_language: str | None = None,
     ) -> ConceptDetail:
         branch_path = branch.strip("/") or "MAIN"
         url = f"{self.target.base_url}/browser/{branch_path}/concepts/{concept_id}"
-        data = self.client.request("GET", url, expect_json=True)
+        data = self.client.request(
+            "GET", url, headers=_language_headers(accept_language), expect_json=True,
+        )
         fsn = _nested_term(data.get("fsn"))
         pt = _nested_term(data.get("pt"))
         synonyms: list[str] = []
+        tagged: list[DescriptionSummary] = []
         descriptions = data.get("descriptions")
         if include_synonyms and isinstance(descriptions, list):
             seen: set[str] = set()
+            seen_tagged: set[tuple[str | None, str]] = set()
             for d in descriptions:
                 if not isinstance(d, dict):
                     continue
@@ -214,12 +234,15 @@ class SnowstormNativeService:
                 term = d.get("term")
                 if not isinstance(term, str):
                     continue
+                lang = d.get("lang") if isinstance(d.get("lang"), str) else None
                 key = term.casefold()
-                if key in seen:
-                    continue
-                seen.add(key)
-                synonyms.append(term)
-                if len(synonyms) >= max_synonyms:
+                if len(tagged) < max_synonyms and (lang, key) not in seen_tagged:
+                    seen_tagged.add((lang, key))
+                    tagged.append(DescriptionSummary(term=term, lang=lang, type=d.get("type")))
+                if len(synonyms) < max_synonyms and key not in seen:
+                    seen.add(key)
+                    synonyms.append(term)
+                if len(synonyms) >= max_synonyms and len(tagged) >= max_synonyms:
                     break
         return ConceptDetail(
             concept_id=str(data.get("conceptId") or concept_id),
@@ -233,6 +256,7 @@ class SnowstormNativeService:
             module_id=data.get("moduleId") if isinstance(data.get("moduleId"), str) else None,
             effective_time=data.get("effectiveTime") if isinstance(data.get("effectiveTime"), str) else None,
             synonyms=synonyms,
+            descriptions=tagged,
             raw_description_count=len(descriptions) if isinstance(descriptions, list) else None,
         )
 
@@ -300,6 +324,10 @@ class SnowstormNativeService:
             returned=len(versions),
             versions=versions,
         )
+
+
+def _language_headers(accept_language: str | None) -> dict[str, str] | None:
+    return {"Accept-Language": accept_language} if accept_language else None
 
 
 def _nested_term(obj: Any) -> str | None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from pydantic import BaseModel, ConfigDict
 
@@ -9,6 +10,8 @@ from .config import AppConfig, TargetConfig
 from .http_client import HttpClient, HttpRequestError
 
 logger = logging.getLogger(__name__)
+
+SNOMED_SYSTEM = "http://snomed.info/sct"
 
 
 class TerminologyInfo(BaseModel):
@@ -21,6 +24,14 @@ class TerminologyInfo(BaseModel):
     target_name: str
     backend_type: BackendType
     branch_path: str | None = None
+    # FHIR edition URI (http://snomed.info/sct/<moduleId>). Without it, FHIR
+    # operations fall back to the server's default edition (International),
+    # so extension content such as translations is silently missing.
+    edition_uri: str | None = None
+    # Accept-Language for Snowstorm browser calls. Without it Snowstorm picks
+    # PT/FSN from the US/GB English refsets, so translated editions return
+    # English PTs even when a local-language PT exists.
+    accept_language: str | None = None
 
 
 class TerminologyNotFoundError(KeyError):
@@ -72,6 +83,15 @@ def discover_snowstorm_terminologies(
         if not isinstance(branch_path, str) or not branch_path.strip():
             continue
         display_name = item.get("name")
+        uri_module_id = item.get("uriModuleId")
+        # An edition with no imported version has nothing for FHIR to resolve:
+        # scoping to it turns every lookup into a 404, so leave it unscoped.
+        has_release = isinstance(item.get("latestVersion"), dict)
+        edition_uri = (
+            f"{SNOMED_SYSTEM}/{uri_module_id.strip()}"
+            if has_release and isinstance(uri_module_id, str) and uri_module_id.strip().isdigit()
+            else None
+        )
         terminologies.append(
             TerminologyInfo(
                 name=short_name.strip().lower(),
@@ -79,9 +99,55 @@ def discover_snowstorm_terminologies(
                 target_name=target_name,
                 backend_type=BackendType.SNOWSTORM,
                 branch_path=branch_path.strip(),
+                edition_uri=edition_uri,
+                accept_language=_accept_language_for(item),
             )
         )
     return terminologies
+
+
+# Snowstorm's Config.DEFAULT_ACCEPT_LANG_HEADER, kept as the fallback tail so
+# concepts without a local-language PT still resolve the usual English PT.
+_SNOWSTORM_DEFAULT_ACCEPT_LANGUAGE = "en-X-900000000000509007,en-X-900000000000508004,en"
+# The US and GB English language refsets that International itself ships.
+_INTERNATIONAL_ENGLISH_REFSETS = frozenset({"900000000000509007", "900000000000508004"})
+
+
+def _accept_language_for(item: dict) -> str | None:
+    """Build an Accept-Language header from a /codesystems item, or None to keep
+    Snowstorm's default (e.g. International, which sets no language refsets)."""
+    # Snowstorm rejects the whole request (HTTP 400 "Invalid displayLanguage")
+    # if any entry is malformed, so only emit SCTIDs and two-letter codes.
+    refsets = [
+        r.strip()
+        for r in item.get("defaultLanguageReferenceSets") or []
+        if isinstance(r, str) and re.fullmatch(r"[0-9]{6,18}", r.strip())
+    ]
+    if not refsets:
+        return None
+    # Snowstorm takes the PT from the first dialect that has one, and some
+    # editions (SE, DK, FR, BE) list the US refset before their own, which
+    # makes the English PT win. A stable sort puts the edition's own refsets
+    # first; US/GB keep their listed order, so a GB-preferring edition stays
+    # GB-first.
+    refsets.sort(key=lambda r: r in _INTERNATIONAL_ENGLISH_REFSETS)
+    # Snowstorm only matches a dialect when the description's language equals
+    # the dialect's code, and /codesystems does not say which language each
+    # refset holds. Pairing every refset with every edition language is safe:
+    # mismatched pairs simply never match.
+    codes: list[str] = []
+    languages = item.get("languages")
+    candidates = [item.get("defaultLanguageCode"), *(languages if isinstance(languages, dict) else [])]
+    for code in candidates:
+        if isinstance(code, str) and re.fullmatch(r"[a-z]{2}", code.strip()) and code.strip() not in codes:
+            codes.append(code.strip())
+    if not codes:
+        return None
+    dialects = [f"{code}-X-{refset}" for refset in refsets for code in codes]
+    # Editions often list the US refset themselves; dict.fromkeys drops the
+    # repeat from the fallback tail while keeping the edition's order.
+    tail = _SNOWSTORM_DEFAULT_ACCEPT_LANGUAGE.split(",")
+    return ",".join(dict.fromkeys([*dialects, *tail]))
 
 
 def build_lite_terminology(

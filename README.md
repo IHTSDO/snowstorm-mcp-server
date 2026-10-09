@@ -37,6 +37,9 @@ Anthropic's infrastructure.
 
 ### Hosted deployment (Docker)
 
+For how this project's own hosts are deployed from `staging` and `main`, see
+[`docs/deployment.md`](docs/deployment.md).
+
 Build and run the container:
 
 ```bash

@@ -32,6 +32,24 @@ def unescape_ecl(value_set_url: str) -> str:
     return value_set_url[:split_at] + html.unescape(value_set_url[split_at:])
 
 
+_SNOMED_SYSTEM = "http://snomed.info/sct"
+_UNVERSIONED_IMPLICIT_PREFIX = _SNOMED_SYSTEM + "?"
+
+
+def scope_to_edition(value_set_url: str, edition_uri: str | None) -> str:
+    """Pin an unversioned implicit SNOMED ValueSet URL to an edition.
+
+    ``http://snomed.info/sct?fhir_vs=...`` is evaluated against the server's
+    default edition, so ECL run "on" an extension never sees its content.
+    Rewriting to ``http://snomed.info/sct/<moduleId>?fhir_vs=...`` scopes the
+    expansion. URLs that already name an edition or version are left alone so
+    an explicit caller choice always wins.
+    """
+    if not edition_uri or not value_set_url.startswith(_UNVERSIONED_IMPLICIT_PREFIX):
+        return value_set_url
+    return edition_uri + value_set_url[len(_SNOMED_SYSTEM):]
+
+
 class LookupResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -235,6 +253,7 @@ class SnomedLookupService:
         summary_only: bool = False,
         max_contains: int = 100,
         fuzzy: bool = False,
+        edition_uri: str | None = None,
     ) -> ExpandResult:
         if offset < 0:
             raise ValueError("offset must be >= 0")
@@ -245,6 +264,7 @@ class SnomedLookupService:
 
         resolved_url = (value_set_url or "").strip() or self.DEFAULT_IMPLICIT_SNOMED_VALUESET_URL
         resolved_url = unescape_ecl(resolved_url)
+        resolved_url = scope_to_edition(resolved_url, edition_uri)
         params: dict[str, Any] = {
             "url": resolved_url,
             "offset": offset,

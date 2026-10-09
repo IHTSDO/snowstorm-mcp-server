@@ -584,3 +584,121 @@ def test_retry_pending_discovery_keeps_error_while_backend_down(monkeypatch) -> 
     assert registry.has_pending_discovery()
     assert registry.list_terminology_names() == []
     assert any("still down" in e for e in registry.discovery_errors)
+
+def test_discover_derives_edition_uri_from_uri_module_id() -> None:
+    target = TargetConfig(base_url="http://test")
+    client = _make_snowstorm_client(
+        target,
+        {
+            "items": [
+                {
+                    "shortName": "SNOMEDCT-EE",
+                    "branchPath": "MAIN/SNOMEDCT-EE",
+                    "uriModuleId": "11000181102",
+                    "latestVersion": {"effectiveDate": 20260530},
+                },
+                {"shortName": "NO-MODULE", "branchPath": "MAIN/NO-MODULE", "latestVersion": {}},
+                {
+                    "shortName": "BAD-MODULE",
+                    "branchPath": "MAIN/BAD",
+                    "uriModuleId": "not-a-sctid",
+                    "latestVersion": {},
+                },
+                # Listed but never released (e.g. SNOMEDCT-GEN): FHIR cannot resolve it.
+                {"shortName": "UNRELEASED", "branchPath": "MAIN/UNRELEASED", "uriModuleId": "123456789"},
+            ]
+        },
+    )
+
+    result = {t.name: t for t in discover_snowstorm_terminologies("ss", target, client=client)}
+
+    assert result["snomedct-ee"].edition_uri == "http://snomed.info/sct/11000181102"
+    assert result["no-module"].edition_uri is None
+    assert result["bad-module"].edition_uri is None
+    assert result["unreleased"].edition_uri is None
+
+
+def test_discover_builds_accept_language_from_edition_language_refsets() -> None:
+    target = TargetConfig(base_url="http://test")
+    client = _make_snowstorm_client(
+        target,
+        {
+            "items": [
+                # Shape of the production SNOMEDCT-EE item: no defaultLanguageCode,
+                # and the US refset listed alongside the Estonian one.
+                {
+                    "shortName": "SNOMEDCT-EE",
+                    "branchPath": "MAIN/SNOMEDCT-EE",
+                    "defaultLanguageReferenceSets": ["71000181105", "900000000000509007"],
+                    "languages": {"et": "Estonian", "ru": "Russian", "en": "English"},
+                },
+                {
+                    "shortName": "SNOMEDCT-XX",
+                    "branchPath": "MAIN/SNOMEDCT-XX",
+                    "defaultLanguageCode": "et",
+                    "defaultLanguageReferenceSets": ["71000181105"],
+                    "languages": {"en": "English"},
+                },
+                # Two translations: /codesystems does not say which refset is
+                # which language, so every refset is paired with every code.
+                {
+                    "shortName": "SNOMEDCT-BE",
+                    "branchPath": "MAIN/SNOMEDCT-BE",
+                    "defaultLanguageReferenceSets": ["31000172101", "21000172104"],
+                    "languages": {"fr": "French", "nl": "Dutch", "en": "English"},
+                },
+                # Shape of the production SNOMEDCT-SE item: the US refset listed
+                # first. Left in that order, the English PT wins over Swedish.
+                {
+                    "shortName": "SNOMEDCT-SE",
+                    "branchPath": "MAIN/SNOMEDCT-SE",
+                    "defaultLanguageReferenceSets": ["900000000000509007", "46011000052107"],
+                    "languages": {"sv": "Swedish", "en": "English"},
+                },
+                # Only International English refsets: their listed order is the
+                # edition's preference (GB over US) and must survive.
+                {
+                    "shortName": "SNOMEDCT-GB",
+                    "branchPath": "MAIN/SNOMEDCT-GB",
+                    "defaultLanguageReferenceSets": ["900000000000508004", "900000000000509007"],
+                    "languages": {"en": "English"},
+                },
+                # International sets no language refsets: keep Snowstorm's default.
+                {"shortName": "SNOMEDCT", "branchPath": "MAIN", "languages": {"en": "English"}},
+                {
+                    "shortName": "JUNK",
+                    "branchPath": "MAIN/JUNK",
+                    # Snowstorm 400s on non-SCTID refsets and non-two-letter codes.
+                    "defaultLanguageReferenceSets": ["not-an-id", "12345"],
+                    "languages": {"haw": "Hawaiian"},
+                },
+            ]
+        },
+    )
+
+    result = {t.name: t for t in discover_snowstorm_terminologies("ss", target, client=client)}
+
+    default_tail = "en-X-900000000000509007,en-X-900000000000508004,en"
+    assert result["snomedct-ee"].accept_language == (
+        "et-X-71000181105,ru-X-71000181105,en-X-71000181105,"
+        "et-X-900000000000509007,ru-X-900000000000509007,en-X-900000000000509007,"
+        "en-X-900000000000508004,en"
+    )
+    assert result["snomedct-xx"].accept_language == (
+        f"et-X-71000181105,en-X-71000181105,{default_tail}"
+    )
+    assert result["snomedct-be"].accept_language == (
+        "fr-X-31000172101,nl-X-31000172101,en-X-31000172101,"
+        "fr-X-21000172104,nl-X-21000172104,en-X-21000172104,"
+        f"{default_tail}"
+    )
+    assert result["snomedct-se"].accept_language == (
+        "sv-X-46011000052107,en-X-46011000052107,"
+        "sv-X-900000000000509007,en-X-900000000000509007,"
+        "en-X-900000000000508004,en"
+    )
+    assert result["snomedct-gb"].accept_language == (
+        "en-X-900000000000508004,en-X-900000000000509007,en"
+    )
+    assert result["snomedct"].accept_language is None
+    assert result["junk"].accept_language is None

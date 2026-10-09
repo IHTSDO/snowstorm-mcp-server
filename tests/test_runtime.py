@@ -332,3 +332,160 @@ def test_runtime_discovery_retry_is_throttled(monkeypatch) -> None:
     with pytest.raises(TerminologyNotFoundError):
         server._resolve(None)
     assert calls == []
+
+
+def _edition_registry() -> tuple[TerminologyRegistry, TargetConfig]:
+    registry, target = _make_registry_and_target()
+    registry.register(
+        TerminologyInfo(
+            name="snomedct-ee",
+            target_name="snowstorm",
+            backend_type=BackendType.SNOWSTORM,
+            branch_path="MAIN/SNOMEDCT-EE",
+            edition_uri="http://snomed.info/sct/11000181102",
+            accept_language="et-X-71000181105,en",
+        ),
+        target,
+    )
+    return registry, target
+
+
+def test_runtime_native_calls_send_the_terminology_accept_language(monkeypatch) -> None:
+    registry, target = _edition_registry()
+
+    from snowstorm_mcp_server import runtime as runtime_module
+
+    monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
+    seen: dict[str, object] = {}
+
+    class _Result:
+        def model_dump(self):
+            return {}
+
+    class _StubNativeService:
+        def __init__(self, _target, *, client=None) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def search_concepts(self, **kwargs):
+            seen["search"] = kwargs["accept_language"]
+            return _Result()
+
+        def get_concept(self, **kwargs):
+            seen["concept"] = kwargs["accept_language"]
+            return _Result()
+
+    monkeypatch.setattr(runtime_module, "SnowstormNativeService", _StubNativeService)
+    server = ServerRuntime(AppConfig(targets={"snowstorm": target}))
+    monkeypatch.setattr(server, "_ensure_native_supported", lambda *_args: None)
+
+    server.snowstorm_search_concepts(terminology="snomedct-ee", term="suhkurtõbi")
+    server.snowstorm_get_concept_native(terminology="snomedct-ee", concept_id="73211009")
+
+    assert seen == {"search": "et-X-71000181105,en", "concept": "et-X-71000181105,en"}
+
+
+@pytest.mark.parametrize(
+    ("explicit_version", "expected_version"),
+    [
+        (None, "http://snomed.info/sct/11000181102"),
+        (
+            "http://snomed.info/sct/11000181102/version/20251130",
+            "http://snomed.info/sct/11000181102/version/20251130",
+        ),
+    ],
+)
+def test_runtime_fhir_calls_default_to_the_terminology_edition(
+    monkeypatch, explicit_version, expected_version
+) -> None:
+    registry, target = _edition_registry()
+
+    from snowstorm_mcp_server import runtime as runtime_module
+
+    monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
+    seen: dict[str, object] = {}
+
+    class _Result:
+        def model_dump(self):
+            return {}
+
+    class _StubFhirService:
+        def __init__(self, _target, *, client=None) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def lookup(self, **kwargs):
+            seen["lookup"] = kwargs["version"]
+            return _Result()
+
+        def validate_code(self, **kwargs):
+            seen["validate_code"] = kwargs["version"]
+            return _Result()
+
+        def subsumes(self, **kwargs):
+            seen["subsumes"] = kwargs["version"]
+            return _Result()
+
+        def expand(self, **kwargs):
+            seen["expand"] = kwargs["edition_uri"]
+            return _Result()
+
+    monkeypatch.setattr(runtime_module, "SnomedLookupService", _StubFhirService)
+    server = ServerRuntime(AppConfig(targets={"snowstorm": target}))
+
+    server.snomed_lookup(terminology="snomedct-ee", code="32684000", version=explicit_version)
+    server.snomed_validate_code(terminology="snomedct-ee", code="32684000", version=explicit_version)
+    server.snomed_subsumes(
+        terminology="snomedct-ee", code_a="1", code_b="2", version=explicit_version
+    )
+    server.snomed_expand(terminology="snomedct-ee")
+
+    assert seen["lookup"] == expected_version
+    assert seen["validate_code"] == expected_version
+    assert seen["subsumes"] == expected_version
+    assert seen["expand"] == "http://snomed.info/sct/11000181102"
+
+
+def test_runtime_fhir_calls_leave_version_unset_without_edition(monkeypatch) -> None:
+    registry, target = _make_registry_and_target()
+
+    from snowstorm_mcp_server import runtime as runtime_module
+
+    monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
+    seen: dict[str, object] = {}
+
+    class _StubFhirService:
+        def __init__(self, _target, *, client=None) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def lookup(self, **kwargs):
+            seen["version"] = kwargs["version"]
+
+            class _Result:
+                def model_dump(self):
+                    return {}
+
+            return _Result()
+
+    monkeypatch.setattr(runtime_module, "SnomedLookupService", _StubFhirService)
+    server = ServerRuntime(AppConfig(targets={"snowstorm": target}))
+
+    server.snomed_lookup(code="404684003")
+
+    assert seen["version"] is None
