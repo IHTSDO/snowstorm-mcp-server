@@ -9,6 +9,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # Same interpreter as the Docker image.
+      UV_PYTHON: "3.12"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,9 +23,13 @@ jobs:
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.11.1"
 
+      # Exactly the versions in uv.lock, the same ones the Docker image
+      # installs. --locked fails if uv.lock is stale against pyproject.toml.
       - name: Install dependencies
-        run: uv pip install --system -e .[dev]
+        run: uv sync --locked --extra dev
 
       - name: Lint + typecheck + unit tests
         run: ./scripts/check.sh

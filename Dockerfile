@@ -1,11 +1,26 @@
+# Turn uv.lock into a hash-pinned requirements file. A separate stage keeps uv
+# out of the runtime image and works with the classic builder as well as
+# BuildKit (the hosts' docker has no buildx).
+FROM python:3.12-slim AS requirements
+COPY --from=ghcr.io/astral-sh/uv:0.11.1 /uv /bin/uv
+WORKDIR /src
+COPY pyproject.toml uv.lock ./
+RUN uv export --locked --no-dev --no-emit-project --format requirements-txt -o /requirements.txt
+
 FROM python:3.12-slim AS base
 
 WORKDIR /app
 
+COPY --from=requirements /requirements.txt /tmp/requirements.txt
 COPY pyproject.toml README.md LICENSE ./
 COPY src/ src/
 
-RUN pip install --no-cache-dir . \
+# Install exactly the runtime versions in uv.lock, hash-checked, so the image
+# runs what CI tested. A bare `pip install .` took the newest releases on every
+# build, which once shipped an SDK upgrade nobody had tested.
+RUN pip install --no-cache-dir --require-hashes -r /tmp/requirements.txt \
+    && pip install --no-cache-dir --no-deps . \
+    && rm /tmp/requirements.txt \
     && useradd --system --no-create-home appuser
 
 # Default config — override at runtime via SNOWSTORM_MCP_CONFIG env var
