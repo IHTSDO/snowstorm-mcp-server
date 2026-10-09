@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.mcpserver.server import CacheableMethod, CacheHint
 from mcp.types import ToolAnnotations
 from starlette.requests import ClientDisconnect
@@ -880,6 +881,10 @@ def _log_tool_error(
 
 
 def _tool_guard(fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+    # Anticipated failures are raised as ToolError: since mcp 2.3 the SDK shows
+    # the client only a ToolError's message and reduces anything else to a bare
+    # "Error executing tool <name>", which would hide the [E_*] code and the
+    # retry advice clients act on. Crashes still fall through to that.
     try:
         result = fn()
         return _truncate_response(result)
@@ -899,10 +904,10 @@ def _tool_guard(fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         raise
     except TerminologyNotFoundError as exc:
         _log_tool_error("E_TARGET_SELECTION", exc)
-        raise ValueError(f"[E_TARGET_SELECTION] {exc}") from exc
+        raise ToolError(f"[E_TARGET_SELECTION] {exc}") from exc
     except UnsupportedBackendError as exc:
         _log_tool_error("E_UNSUPPORTED_CAPABILITY", exc)
-        raise ValueError(f"[E_UNSUPPORTED_CAPABILITY] {exc}") from exc
+        raise ToolError(f"[E_UNSUPPORTED_CAPABILITY] {exc}") from exc
     except HttpRequestError as exc:
         msg = str(exc)
         if "timed out" in msg.lower():
@@ -914,9 +919,9 @@ def _tool_guard(fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         else:
             code = "E_BACKEND_REQUEST"
         _log_tool_error(code, exc, status_code=exc.status_code)
-        raise ValueError(f"[{code}] {msg}") from exc
+        raise ToolError(f"[{code}] {msg}") from exc
     except Exception as exc:
-        # Unexpected failure — log with traceback before FastMCP converts it
+        # Unexpected failure — log with traceback before the SDK converts it
         # into a generic error response.
         _log_tool_error("E_INTERNAL", exc, exc_info=True)
         raise
