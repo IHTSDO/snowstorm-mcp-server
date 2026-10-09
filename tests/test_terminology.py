@@ -647,6 +647,22 @@ def test_discover_builds_accept_language_from_edition_language_refsets() -> None
                     "defaultLanguageReferenceSets": ["31000172101", "21000172104"],
                     "languages": {"fr": "French", "nl": "Dutch", "en": "English"},
                 },
+                # Shape of the production SNOMEDCT-SE item: the US refset listed
+                # first. Left in that order, the English PT wins over Swedish.
+                {
+                    "shortName": "SNOMEDCT-SE",
+                    "branchPath": "MAIN/SNOMEDCT-SE",
+                    "defaultLanguageReferenceSets": ["900000000000509007", "46011000052107"],
+                    "languages": {"sv": "Swedish", "en": "English"},
+                },
+                # Only International English refsets: their listed order is the
+                # edition's preference (GB over US) and must survive.
+                {
+                    "shortName": "SNOMEDCT-GB",
+                    "branchPath": "MAIN/SNOMEDCT-GB",
+                    "defaultLanguageReferenceSets": ["900000000000508004", "900000000000509007"],
+                    "languages": {"en": "English"},
+                },
                 # International sets no language refsets: keep Snowstorm's default.
                 {"shortName": "SNOMEDCT", "branchPath": "MAIN", "languages": {"en": "English"}},
                 {
@@ -675,6 +691,14 @@ def test_discover_builds_accept_language_from_edition_language_refsets() -> None
         "fr-X-31000172101,nl-X-31000172101,en-X-31000172101,"
         "fr-X-21000172104,nl-X-21000172104,en-X-21000172104,"
         f"{default_tail}"
+    )
+    assert result["snomedct-se"].accept_language == (
+        "sv-X-46011000052107,en-X-46011000052107,"
+        "sv-X-900000000000509007,en-X-900000000000509007,"
+        "en-X-900000000000508004,en"
+    )
+    assert result["snomedct-gb"].accept_language == (
+        "en-X-900000000000508004,en-X-900000000000509007,en"
     )
     assert result["snomedct"].accept_language is None
     assert result["junk"].accept_language is None

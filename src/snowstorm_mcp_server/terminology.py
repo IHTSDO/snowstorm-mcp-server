@@ -109,6 +109,8 @@ def discover_snowstorm_terminologies(
 # Snowstorm's Config.DEFAULT_ACCEPT_LANG_HEADER, kept as the fallback tail so
 # concepts without a local-language PT still resolve the usual English PT.
 _SNOWSTORM_DEFAULT_ACCEPT_LANGUAGE = "en-X-900000000000509007,en-X-900000000000508004,en"
+# The US and GB English language refsets that International itself ships.
+_INTERNATIONAL_ENGLISH_REFSETS = frozenset({"900000000000509007", "900000000000508004"})
 
 
 def _accept_language_for(item: dict) -> str | None:
@@ -123,6 +125,12 @@ def _accept_language_for(item: dict) -> str | None:
     ]
     if not refsets:
         return None
+    # Snowstorm takes the PT from the first dialect that has one, and some
+    # editions (SE, DK, FR, BE) list the US refset before their own, which
+    # makes the English PT win. A stable sort puts the edition's own refsets
+    # first; US/GB keep their listed order, so a GB-preferring edition stays
+    # GB-first.
+    refsets.sort(key=lambda r: r in _INTERNATIONAL_ENGLISH_REFSETS)
     # Snowstorm only matches a dialect when the description's language equals
     # the dialect's code, and /codesystems does not say which language each
     # refset holds. Pairing every refset with every edition language is safe:
