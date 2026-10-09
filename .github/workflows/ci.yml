@@ -1,9 +1,10 @@
 name: CI
 
+# Pushes to main and staging are tested by deploy.yml, which calls this
+# workflow before building an image, so there is no push trigger here.
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_call:
 
 jobs:
   test:
