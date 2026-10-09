@@ -35,10 +35,12 @@ git switch staging && git pull && git merge origin/main && git push
 
 `.github/workflows/deploy.yml` runs CI, builds the image and pushes it to
 `ghcr.io/ihtsdo/snowstorm-mcp-server` tagged `sha-<commit>` and `<branch>`.
-It then SSHes to the environment's host, passing only the image digest.
+It then SSHes to the environment's host, passing only the image digest as
+the command and the job's `GITHUB_TOKEN` on stdin.
 On the host, [`deploy/remote-deploy.sh`](../deploy/remote-deploy.sh):
 
-1. pulls the image;
+1. pulls the image, logging in with that token from a throwaway Docker
+   config that is deleted straight after;
 2. validates the host's `config.yaml` against the new code, so a schema
    mismatch fails here while the old container keeps serving;
 3. recreates the container (same flags as before: `--memory`, loopback port,
@@ -89,10 +91,12 @@ to the script** so it can't open a shell:
 command="/usr/local/bin/snowstorm-mcp-deploy",restrict ssh-ed25519 AAAA... gha-deploy-staging
 ```
 
-Get the host key for pinning, from a trusted network path:
+Get the host key for pinning, from a trusted network path. Pin a key type
+the host's sshd actually serves (`sudo sshd -T | grep ^hostkey`); a key file
+that exists in `/etc/ssh` but isn't listed there fails strict checking.
 
 ```bash
-ssh-keyscan -t ed25519 <host>
+ssh-keyscan <host>
 ```
 
 The security group must allow port 22 from GitHub Actions runners. The
@@ -112,12 +116,14 @@ Set these in *Settings → Environments → staging / production*:
 
 Then delete the local private key.
 
-### GHCR package visibility
+### GHCR package access
 
-The first build creates the `snowstorm-mcp-server` package under the org. To
-let hosts pull without credentials, set it to **public** in the package
-settings. If it must stay private, run `docker login ghcr.io` as the deploy
-user with a read-only (`read:packages`) token.
+The first build creates the `snowstorm-mcp-server` package under the org,
+private by default, and it can stay private. The deploy job's `GITHUB_TOKEN`
+has `packages: read`, and this repo can read the package because it published
+it. The host uses that token for the one pull and stores nothing; it expires
+when the job ends. Running the script by hand on a host for an image it
+doesn't already have needs a `docker login ghcr.io` first.
 
 ### Migrating an existing host
 

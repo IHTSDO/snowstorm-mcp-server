@@ -10,6 +10,11 @@
 # exactly one image reference from this repo's GHCR package. For manual use,
 # pass it as the first argument instead.
 #
+# The package is private, so the workflow pipes its short-lived GITHUB_TOKEN
+# on stdin (token on the first line, user on the second). It is used for this
+# pull only and never stored. Without one, the pull uses whatever credentials
+# the deploy user already has.
+#
 # Host-specific settings come from /etc/snowstorm-mcp-deploy.env if present.
 set -euo pipefail
 
@@ -29,6 +34,12 @@ IMAGE_RE='^ghcr\.io/ihtsdo/snowstorm-mcp-server(@sha256:[0-9a-f]{64}|:sha-[0-9a-
 if ! [[ "$IMAGE_REF" =~ $IMAGE_RE ]]; then
     echo "refusing: expected ghcr.io/ihtsdo/snowstorm-mcp-server@sha256:<digest> or :sha-<commit>, got '$IMAGE_REF'" >&2
     exit 2
+fi
+
+REGISTRY_TOKEN=""
+REGISTRY_USER=""
+if [ ! -t 0 ] && IFS= read -r -t 10 REGISTRY_TOKEN; then
+    IFS= read -r -t 10 REGISTRY_USER || true
 fi
 
 # Serialise deploys on this host.
@@ -69,10 +80,27 @@ wait_healthy() {
     return 1
 }
 
+pull_image() {
+    if [ -z "$REGISTRY_TOKEN" ]; then
+        docker pull -q "$IMAGE_REF" >/dev/null
+        return
+    fi
+    # Log in with a throwaway Docker config so the token never lands in the
+    # deploy user's ~/.docker; the subshell's trap deletes it even on failure.
+    local cfg
+    cfg="$(mktemp -d)"
+    (
+        trap 'rm -rf "$cfg"' EXIT
+        printf '%s\n' "$REGISTRY_TOKEN" |
+            docker --config "$cfg" login ghcr.io -u "${REGISTRY_USER:-github-actions}" --password-stdin >/dev/null
+        docker --config "$cfg" pull -q "$IMAGE_REF" >/dev/null
+    )
+}
+
 [ -f "$CONFIG_PATH" ] || { echo "config not found at $CONFIG_PATH" >&2; exit 1; }
 
 log "pulling $IMAGE_REF"
-docker pull -q "$IMAGE_REF" >/dev/null
+pull_image
 
 # Validate the host config against the new code before touching the running
 # container. AppConfig forbids unknown keys, so a schema change that the host

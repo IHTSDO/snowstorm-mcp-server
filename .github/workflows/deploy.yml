@@ -75,6 +75,11 @@ jobs:
     # Run after a successful build, or on a manual redeploy where build is skipped.
     if: ${{ !cancelled() && !failure() && (github.ref_name == 'main' || github.ref_name == 'staging') }}
     runs-on: ubuntu-latest
+    # packages: read lets this job's GITHUB_TOKEN pull the private image; the
+    # host borrows it for one pull (see deploy/remote-deploy.sh).
+    permissions:
+      contents: read
+      packages: read
     environment:
       name: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
     steps:
@@ -99,15 +104,19 @@ jobs:
           KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
           TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
           IMAGE_REF: ${{ steps.image.outputs.ref }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           # The key is pinned to a forced command on the host, so the image
-          # reference is the only thing this connection can pass.
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
-            -o BatchMode=yes "$TARGET" "$IMAGE_REF"
+          # reference is the only command this connection can pass. The
+          # registry token goes on stdin, never on the command line; it
+          # expires when this job ends.
+          printf '%s\n%s\n' "$REGISTRY_TOKEN" "$GITHUB_ACTOR" |
+            ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+              -o BatchMode=yes "$TARGET" "$IMAGE_REF"
 
       - name: Summary
         env:
