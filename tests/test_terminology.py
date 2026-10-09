@@ -616,3 +616,51 @@ def test_discover_derives_edition_uri_from_uri_module_id() -> None:
     assert result["no-module"].edition_uri is None
     assert result["bad-module"].edition_uri is None
     assert result["unreleased"].edition_uri is None
+
+
+def test_discover_builds_accept_language_from_edition_language_refsets() -> None:
+    target = TargetConfig(base_url="http://test")
+    client = _make_snowstorm_client(
+        target,
+        {
+            "items": [
+                {
+                    "shortName": "SNOMEDCT-EE",
+                    "branchPath": "MAIN/SNOMEDCT-EE",
+                    "defaultLanguageCode": "et",
+                    "defaultLanguageReferenceSets": ["71000181105"],
+                    "languages": {"et": "Estonian", "en": "English"},
+                },
+                # Two translations: /codesystems does not say which refset is
+                # which language, so every refset is paired with every code.
+                {
+                    "shortName": "SNOMEDCT-BE",
+                    "branchPath": "MAIN/SNOMEDCT-BE",
+                    "defaultLanguageReferenceSets": ["31000172101", "21000172104"],
+                    "languages": {"fr": "French", "nl": "Dutch", "en": "English"},
+                },
+                # International sets no language refsets: keep Snowstorm's default.
+                {"shortName": "SNOMEDCT", "branchPath": "MAIN", "languages": {"en": "English"}},
+                {
+                    "shortName": "JUNK",
+                    "branchPath": "MAIN/JUNK",
+                    "defaultLanguageReferenceSets": ["not-an-id"],
+                    "languages": {"et": "Estonian"},
+                },
+            ]
+        },
+    )
+
+    result = {t.name: t for t in discover_snowstorm_terminologies("ss", target, client=client)}
+
+    default_tail = "en-X-900000000000509007,en-X-900000000000508004,en"
+    assert result["snomedct-ee"].accept_language == (
+        f"et-X-71000181105,en-X-71000181105,{default_tail}"
+    )
+    assert result["snomedct-be"].accept_language == (
+        "fr-X-31000172101,nl-X-31000172101,en-X-31000172101,"
+        "fr-X-21000172104,nl-X-21000172104,en-X-21000172104,"
+        f"{default_tail}"
+    )
+    assert result["snomedct"].accept_language is None
+    assert result["junk"].accept_language is None
