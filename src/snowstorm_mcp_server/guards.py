@@ -23,16 +23,21 @@ from collections.abc import Callable, Hashable
 from time import monotonic
 from typing import Any
 
+from mcp.server.mcpserver.exceptions import ToolError
+
 logger = logging.getLogger(__name__)
 
 
 # ── Exceptions ──────────────────────────────────────────────────────────
 
 
-class SnowstormGuardError(Exception):
+class SnowstormGuardError(ToolError):
     """Raised when a query is blocked by a performance guard.
 
-    Message is actionable and safe to surface directly to the caller.
+    Message is actionable and safe to surface directly to the caller. It is a
+    ToolError because the SDK shows the client only a ToolError's message; most
+    guards run before a tool body enters _tool_guard, so they can't rely on it
+    to translate them.
     """
 
 

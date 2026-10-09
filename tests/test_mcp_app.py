@@ -4,8 +4,11 @@ import json
 
 import pytest
 
-from snowstorm_mcp_server.guards import SnowstormRateLimitError
+from mcp.server.mcpserver.exceptions import ToolError
+
+from snowstorm_mcp_server.http_client import HttpRequestError
 from snowstorm_mcp_server.mcp_app import MAX_RESPONSE_CHARS, _truncate_response, create_mcp_app
+from snowstorm_mcp_server.terminology import TerminologyNotFoundError
 
 
 @pytest.fixture()
@@ -359,7 +362,7 @@ class TestGuardsWiredToTools:
     """Verify that tool functions enforce rate limiting and per-session limits.
 
     Each test creates an MCP app with a rate limit of 1 call per window so
-    that the first call succeeds and the second raises SnowstormRateLimitError.
+    that the first call succeeds and the second raises an [E_RATE_LIMIT] ToolError.
     Runtime methods are stubbed out to keep tests fast and self-contained.
     """
 
@@ -370,7 +373,7 @@ class TestGuardsWiredToTools:
         app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
 
         _call_tool(app, "snomed_lookup", {"code": "123"})
-        with pytest.raises(SnowstormRateLimitError):
+        with pytest.raises(ToolError, match=r"\[E_RATE_LIMIT\]"):
             _call_tool(app, "snomed_lookup", {"code": "123"})
 
     def test_snomed_validate_code_is_rate_limited(self, monkeypatch):
@@ -380,7 +383,7 @@ class TestGuardsWiredToTools:
         app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
 
         _call_tool(app, "snomed_validate_code", {"code": "123"})
-        with pytest.raises(SnowstormRateLimitError):
+        with pytest.raises(ToolError, match=r"\[E_RATE_LIMIT\]"):
             _call_tool(app, "snomed_validate_code", {"code": "123"})
 
     def test_snomed_subsumes_is_rate_limited(self, monkeypatch):
@@ -390,7 +393,7 @@ class TestGuardsWiredToTools:
         app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
 
         _call_tool(app, "snomed_subsumes", {"code_a": "22298006", "code_b": "73211009"})
-        with pytest.raises(SnowstormRateLimitError):
+        with pytest.raises(ToolError, match=r"\[E_RATE_LIMIT\]"):
             _call_tool(app, "snomed_subsumes", {"code_a": "22298006", "code_b": "73211009"})
 
     def test_snowstorm_search_is_rate_limited(self, monkeypatch):
@@ -400,7 +403,7 @@ class TestGuardsWiredToTools:
         app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
 
         _call_tool(app, "snowstorm_search_concepts", {"term": "asthma"})
-        with pytest.raises(SnowstormRateLimitError):
+        with pytest.raises(ToolError, match=r"\[E_RATE_LIMIT\]"):
             _call_tool(app, "snowstorm_search_concepts", {"term": "asthma"})
 
     def test_list_terminologies_is_not_rate_limited(self, monkeypatch):
@@ -423,7 +426,7 @@ class TestGuardsWiredToTools:
         app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
 
         _call_tool(app, "server_health", {})
-        with pytest.raises(SnowstormRateLimitError):
+        with pytest.raises(ToolError, match=r"\[E_RATE_LIMIT\]"):
             _call_tool(app, "server_health", {})
 
     def test_server_capabilities_is_rate_limited(self, monkeypatch):
@@ -437,7 +440,7 @@ class TestGuardsWiredToTools:
         app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
 
         _call_tool(app, "server_capabilities", {})
-        with pytest.raises(SnowstormRateLimitError):
+        with pytest.raises(ToolError, match=r"\[E_RATE_LIMIT\]"):
             _call_tool(app, "server_capabilities", {})
 
     def test_fhir_metadata_is_rate_limited(self, monkeypatch):
@@ -447,7 +450,7 @@ class TestGuardsWiredToTools:
         app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
 
         _call_tool(app, "fhir_metadata", {})
-        with pytest.raises(SnowstormRateLimitError):
+        with pytest.raises(ToolError, match=r"\[E_RATE_LIMIT\]"):
             _call_tool(app, "fhir_metadata", {})
 
     def test_per_session_limit_blocks_heavy_session_not_others(self, monkeypatch):
@@ -466,7 +469,7 @@ class TestGuardsWiredToTools:
         session_b = _StubCtx()
 
         _call_tool(app, "snomed_lookup", {"code": "123", "ctx": session_a})
-        with pytest.raises(SnowstormRateLimitError):
+        with pytest.raises(ToolError, match=r"\[E_RATE_LIMIT\]"):
             _call_tool(app, "snomed_lookup", {"code": "123", "ctx": session_a})
 
         # session_b has an independent counter and should still be allowed through
@@ -689,8 +692,76 @@ class TestExpansionPreflightConcurrency:
         )
 
         _call_tool(app, "snomed_expand", {"value_set_url": "http://snomed.info/sct?fhir_vs=ecl/<<195967001"})
-        with pytest.raises(SnowstormRateLimitError):
+        with pytest.raises(ToolError, match=r"\[E_RATE_LIMIT\]"):
             _call_tool(app, "snomed_expand", {"value_set_url": "http://snomed.info/sct?fhir_vs=ecl/<<50043002"})
+
+
+class TestClientVisibleToolErrors:
+    """Error codes must reach a real client, not just leave the tool function.
+
+    Since mcp 2.3 the SDK shows the client only a ToolError's message and reduces
+    anything else to "Error executing tool <name>". _call_tool skips that wrapper,
+    which is how the [E_*] codes vanished from production unnoticed, so these go
+    through an in-process client session instead.
+    """
+
+    @staticmethod
+    async def _call(app, *arguments_list: dict) -> list:
+        from mcp import Client
+
+        async with Client(app) as client:
+            return [await client.call_tool("snomed_lookup", arguments) for arguments in arguments_list]
+
+    @pytest.mark.anyio
+    async def test_rate_limit_code_and_advice_reach_the_client(self, monkeypatch):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        monkeypatch.setattr(ServerRuntime, "snomed_lookup", lambda self, **_kw: {"code": "123"})
+        app = _create_mcp_with_guards(monkeypatch, rate_limit_calls=1, rate_limit_window_seconds=60)
+
+        first, second = await self._call(app, {"code": "123"}, {"code": "123"})
+
+        assert not first.is_error
+        assert second.is_error
+        text = second.content[0].text
+        assert text.startswith("Error executing tool snomed_lookup: [E_RATE_LIMIT] Rate limit reached")
+        assert "Retry in" in text
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        ("raised", "code"),
+        [
+            (lambda: HttpRequestError("upstream said no", status_code=502), "E_BACKEND_HTTP"),
+            (lambda: HttpRequestError("read timed out"), "E_BACKEND_TIMEOUT"),
+            (lambda: TerminologyNotFoundError("snomedct-xx"), "E_TARGET_SELECTION"),
+        ],
+    )
+    async def test_anticipated_failure_codes_reach_the_client(self, mcp, monkeypatch, raised, code):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        def _fail(self, **_kw):
+            raise raised()
+
+        monkeypatch.setattr(ServerRuntime, "snomed_lookup", _fail)
+
+        (result,) = await self._call(mcp, {"code": "123"})
+
+        assert result.is_error
+        assert f"[{code}]" in result.content[0].text
+
+    @pytest.mark.anyio
+    async def test_crash_details_stay_on_the_server(self, mcp, monkeypatch):
+        from snowstorm_mcp_server.runtime import ServerRuntime
+
+        def _crash(self, **_kw):
+            raise RuntimeError("internal detail that must not leak")
+
+        monkeypatch.setattr(ServerRuntime, "snomed_lookup", _crash)
+
+        (result,) = await self._call(mcp, {"code": "123"})
+
+        assert result.is_error
+        assert result.content[0].text == "Error executing tool snomed_lookup"
 
 
 def test_client_disconnect_is_not_logged_as_an_internal_error(caplog) -> None:
