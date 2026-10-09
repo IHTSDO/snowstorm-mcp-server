@@ -343,10 +343,51 @@ def _edition_registry() -> tuple[TerminologyRegistry, TargetConfig]:
             backend_type=BackendType.SNOWSTORM,
             branch_path="MAIN/SNOMEDCT-EE",
             edition_uri="http://snomed.info/sct/11000181102",
+            accept_language="et-X-71000181105,en",
         ),
         target,
     )
     return registry, target
+
+
+def test_runtime_native_calls_send_the_terminology_accept_language(monkeypatch) -> None:
+    registry, target = _edition_registry()
+
+    from snowstorm_mcp_server import runtime as runtime_module
+
+    monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
+    seen: dict[str, object] = {}
+
+    class _Result:
+        def model_dump(self):
+            return {}
+
+    class _StubNativeService:
+        def __init__(self, _target, *, client=None) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def search_concepts(self, **kwargs):
+            seen["search"] = kwargs["accept_language"]
+            return _Result()
+
+        def get_concept(self, **kwargs):
+            seen["concept"] = kwargs["accept_language"]
+            return _Result()
+
+    monkeypatch.setattr(runtime_module, "SnowstormNativeService", _StubNativeService)
+    server = ServerRuntime(AppConfig(targets={"snowstorm": target}))
+    monkeypatch.setattr(server, "_ensure_native_supported", lambda *_args: None)
+
+    server.snowstorm_search_concepts(terminology="snomedct-ee", term="suhkurtõbi")
+    server.snowstorm_get_concept_native(terminology="snomedct-ee", concept_id="73211009")
+
+    assert seen == {"search": "et-X-71000181105,en", "concept": "et-X-71000181105,en"}
 
 
 @pytest.mark.parametrize(

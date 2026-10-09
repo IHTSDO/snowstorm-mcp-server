@@ -122,6 +122,7 @@ class SnowstormNativeService:
         branch: str = "MAIN",
         limit: int = 10,
         active_only: bool = True,
+        accept_language: str | None = None,
     ) -> ConceptSearchResult:
         branch_path = branch.strip("/") or "MAIN"
         searchable_len = _searchable_term_length(term)
@@ -149,7 +150,9 @@ class SnowstormNativeService:
             "active": "true" if active_only else "false",
             "limit": str(raw_limit),
         }
-        data = self.client.request("GET", url, params=params, expect_json=True)
+        data = self.client.request(
+            "GET", url, params=params, headers=_language_headers(accept_language), expect_json=True,
+        )
         items = data.get("items", [])
         # Snowstorm returns description-level results ranked by Elasticsearch.
         # We deduplicate by concept (keeping the first/highest-ranked occurrence)
@@ -206,10 +209,13 @@ class SnowstormNativeService:
         branch: str = "MAIN",
         include_synonyms: bool = True,
         max_synonyms: int = 15,
+        accept_language: str | None = None,
     ) -> ConceptDetail:
         branch_path = branch.strip("/") or "MAIN"
         url = f"{self.target.base_url}/browser/{branch_path}/concepts/{concept_id}"
-        data = self.client.request("GET", url, expect_json=True)
+        data = self.client.request(
+            "GET", url, headers=_language_headers(accept_language), expect_json=True,
+        )
         fsn = _nested_term(data.get("fsn"))
         pt = _nested_term(data.get("pt"))
         synonyms: list[str] = []
@@ -318,6 +324,10 @@ class SnowstormNativeService:
             returned=len(versions),
             versions=versions,
         )
+
+
+def _language_headers(accept_language: str | None) -> dict[str, str] | None:
+    return {"Accept-Language": accept_language} if accept_language else None
 
 
 def _nested_term(obj: Any) -> str | None:
