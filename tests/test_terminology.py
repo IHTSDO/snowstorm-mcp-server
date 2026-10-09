@@ -591,9 +591,21 @@ def test_discover_derives_edition_uri_from_uri_module_id() -> None:
         target,
         {
             "items": [
-                {"shortName": "SNOMEDCT-EE", "branchPath": "MAIN/SNOMEDCT-EE", "uriModuleId": "11000181102"},
-                {"shortName": "NO-MODULE", "branchPath": "MAIN/NO-MODULE"},
-                {"shortName": "BAD-MODULE", "branchPath": "MAIN/BAD", "uriModuleId": "not-a-sctid"},
+                {
+                    "shortName": "SNOMEDCT-EE",
+                    "branchPath": "MAIN/SNOMEDCT-EE",
+                    "uriModuleId": "11000181102",
+                    "latestVersion": {"effectiveDate": 20260530},
+                },
+                {"shortName": "NO-MODULE", "branchPath": "MAIN/NO-MODULE", "latestVersion": {}},
+                {
+                    "shortName": "BAD-MODULE",
+                    "branchPath": "MAIN/BAD",
+                    "uriModuleId": "not-a-sctid",
+                    "latestVersion": {},
+                },
+                # Listed but never released (e.g. SNOMEDCT-GEN): FHIR cannot resolve it.
+                {"shortName": "UNRELEASED", "branchPath": "MAIN/UNRELEASED", "uriModuleId": "123456789"},
             ]
         },
     )
@@ -603,3 +615,4 @@ def test_discover_derives_edition_uri_from_uri_module_id() -> None:
     assert result["snomedct-ee"].edition_uri == "http://snomed.info/sct/11000181102"
     assert result["no-module"].edition_uri is None
     assert result["bad-module"].edition_uri is None
+    assert result["unreleased"].edition_uri is None

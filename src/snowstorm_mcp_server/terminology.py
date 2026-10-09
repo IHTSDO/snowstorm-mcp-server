@@ -79,9 +79,12 @@ def discover_snowstorm_terminologies(
             continue
         display_name = item.get("name")
         uri_module_id = item.get("uriModuleId")
+        # An edition with no imported version has nothing for FHIR to resolve:
+        # scoping to it turns every lookup into a 404, so leave it unscoped.
+        has_release = isinstance(item.get("latestVersion"), dict)
         edition_uri = (
             f"{SNOMED_SYSTEM}/{uri_module_id.strip()}"
-            if isinstance(uri_module_id, str) and uri_module_id.strip().isdigit()
+            if has_release and isinstance(uri_module_id, str) and uri_module_id.strip().isdigit()
             else None
         )
         terminologies.append(
