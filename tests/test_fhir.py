@@ -532,3 +532,58 @@ def test_expand_does_not_rewrite_ampersands_outside_the_ecl_segment() -> None:
 
     # The &amp; before the ECL marker survives; only the ECL tail is unescaped.
     assert seen["url"] == "http://snomed.info/sct?version=x&amp;y&fhir_vs=ecl/<<73211009"
+
+
+def test_expand_scopes_unversioned_implicit_url_to_edition() -> None:
+    target = TargetConfig(base_url="http://test")
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = request.url.params["url"]
+        return httpx.Response(200, json={"resourceType": "ValueSet", "expansion": {"total": 1}})
+
+    with _make_service(target, handler) as svc:
+        result = svc.expand(
+            value_set_url="http://snomed.info/sct?fhir_vs=ecl/32684000 {{ language = et }}",
+            edition_uri="http://snomed.info/sct/11000181102",
+        )
+
+    expected = "http://snomed.info/sct/11000181102?fhir_vs=ecl/32684000 {{ language = et }}"
+    assert seen["url"] == expected
+    assert result.value_set_url == expected
+
+
+@pytest.mark.parametrize(
+    "value_set_url",
+    [
+        "http://snomed.info/sct/731000124108?fhir_vs=ecl/<<404684003",
+        "http://snomed.info/sct/11000181102/version/20260530?fhir_vs=ecl/<<404684003",
+        "http://example.org/fhir/ValueSet/my-set",
+    ],
+)
+def test_expand_leaves_explicit_edition_or_non_implicit_urls_alone(value_set_url: str) -> None:
+    target = TargetConfig(base_url="http://test")
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = request.url.params["url"]
+        return httpx.Response(200, json={"resourceType": "ValueSet", "expansion": {"total": 0}})
+
+    with _make_service(target, handler) as svc:
+        svc.expand(value_set_url=value_set_url, edition_uri="http://snomed.info/sct/11000181102")
+
+    assert seen["url"] == value_set_url
+
+
+def test_expand_default_url_is_scoped_when_edition_known() -> None:
+    target = TargetConfig(base_url="http://test")
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = request.url.params["url"]
+        return httpx.Response(200, json={"resourceType": "ValueSet", "expansion": {"total": 0}})
+
+    with _make_service(target, handler) as svc:
+        svc.expand(edition_uri="http://snomed.info/sct/11000181102")
+
+    assert seen["url"] == "http://snomed.info/sct/11000181102?fhir_vs"
