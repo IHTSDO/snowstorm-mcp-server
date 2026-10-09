@@ -624,12 +624,20 @@ def test_discover_builds_accept_language_from_edition_language_refsets() -> None
         target,
         {
             "items": [
+                # Shape of the production SNOMEDCT-EE item: no defaultLanguageCode,
+                # and the US refset listed alongside the Estonian one.
                 {
                     "shortName": "SNOMEDCT-EE",
                     "branchPath": "MAIN/SNOMEDCT-EE",
+                    "defaultLanguageReferenceSets": ["71000181105", "900000000000509007"],
+                    "languages": {"et": "Estonian", "ru": "Russian", "en": "English"},
+                },
+                {
+                    "shortName": "SNOMEDCT-XX",
+                    "branchPath": "MAIN/SNOMEDCT-XX",
                     "defaultLanguageCode": "et",
                     "defaultLanguageReferenceSets": ["71000181105"],
-                    "languages": {"et": "Estonian", "en": "English"},
+                    "languages": {"en": "English"},
                 },
                 # Two translations: /codesystems does not say which refset is
                 # which language, so every refset is paired with every code.
@@ -655,6 +663,11 @@ def test_discover_builds_accept_language_from_edition_language_refsets() -> None
 
     default_tail = "en-X-900000000000509007,en-X-900000000000508004,en"
     assert result["snomedct-ee"].accept_language == (
+        "et-X-71000181105,ru-X-71000181105,en-X-71000181105,"
+        "et-X-900000000000509007,ru-X-900000000000509007,en-X-900000000000509007,"
+        "en-X-900000000000508004,en"
+    )
+    assert result["snomedct-xx"].accept_language == (
         f"et-X-71000181105,en-X-71000181105,{default_tail}"
     )
     assert result["snomedct-be"].accept_language == (

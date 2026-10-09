@@ -134,7 +134,10 @@ def _accept_language_for(item: dict) -> str | None:
     if not codes:
         return None
     dialects = [f"{code}-X-{refset}" for refset in refsets for code in codes]
-    return ",".join([*dialects, _SNOWSTORM_DEFAULT_ACCEPT_LANGUAGE])
+    # Editions often list the US refset themselves; dict.fromkeys drops the
+    # repeat from the fallback tail while keeping the edition's order.
+    tail = _SNOWSTORM_DEFAULT_ACCEPT_LANGUAGE.split(",")
+    return ",".join(dict.fromkeys([*dialects, *tail]))
 
 
 def build_lite_terminology(
