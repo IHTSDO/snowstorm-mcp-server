@@ -102,10 +102,14 @@ jobs:
         env:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          # A variable, not a secret: the user name grants nothing without the
+          # key, and as a secret every "deploy" in the log was masked to ***.
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
           IMAGE_REF: ${{ steps.image.outputs.ref }}
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          : "${DEPLOY_USER:?set the DEPLOY_USER variable on this environment}"
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
@@ -116,7 +120,7 @@ jobs:
           # expires when this job ends.
           printf '%s\n%s\n' "$REGISTRY_TOKEN" "$GITHUB_ACTOR" |
             ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
-              -o BatchMode=yes "$TARGET" "$IMAGE_REF"
+              -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "$IMAGE_REF"
 
       - name: Summary
         env:

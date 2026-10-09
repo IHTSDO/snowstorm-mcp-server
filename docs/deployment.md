@@ -103,16 +103,23 @@ The security group must allow port 22 from GitHub Actions runners. The
 deploy user can only run the script, and the script only accepts an image
 reference from this repo's package.
 
-### GitHub environment secrets
+### GitHub environment secrets and variables
 
 Set these in *Settings → Environments → staging / production*:
 
 | Secret               | Value                                          |
 |----------------------|------------------------------------------------|
 | `DEPLOY_HOST`        | host name or IP                                |
-| `DEPLOY_USER`        | `deploy`                                       |
 | `DEPLOY_SSH_KEY`     | contents of the private key (`deploy_staging`) |
 | `DEPLOY_KNOWN_HOSTS` | the `ssh-keyscan` output line                  |
+
+| Variable      | Value    |
+|---------------|----------|
+| `DEPLOY_USER` | `deploy` |
+
+`DEPLOY_USER` is a variable because GitHub masks a secret's value wherever it
+appears in the logs, and "deploy" appears all over them. The user name grants
+nothing without the key.
 
 Then delete the local private key.
 
