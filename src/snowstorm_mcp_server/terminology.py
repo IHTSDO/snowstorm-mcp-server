@@ -114,10 +114,12 @@ _SNOWSTORM_DEFAULT_ACCEPT_LANGUAGE = "en-X-900000000000509007,en-X-9000000000005
 def _accept_language_for(item: dict) -> str | None:
     """Build an Accept-Language header from a /codesystems item, or None to keep
     Snowstorm's default (e.g. International, which sets no language refsets)."""
+    # Snowstorm rejects the whole request (HTTP 400 "Invalid displayLanguage")
+    # if any entry is malformed, so only emit SCTIDs and two-letter codes.
     refsets = [
         r.strip()
         for r in item.get("defaultLanguageReferenceSets") or []
-        if isinstance(r, str) and r.strip().isdigit()
+        if isinstance(r, str) and re.fullmatch(r"[0-9]{6,18}", r.strip())
     ]
     if not refsets:
         return None

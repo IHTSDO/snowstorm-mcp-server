@@ -652,8 +652,9 @@ def test_discover_builds_accept_language_from_edition_language_refsets() -> None
                 {
                     "shortName": "JUNK",
                     "branchPath": "MAIN/JUNK",
-                    "defaultLanguageReferenceSets": ["not-an-id"],
-                    "languages": {"et": "Estonian"},
+                    # Snowstorm 400s on non-SCTID refsets and non-two-letter codes.
+                    "defaultLanguageReferenceSets": ["not-an-id", "12345"],
+                    "languages": {"haw": "Hawaiian"},
                 },
             ]
         },
