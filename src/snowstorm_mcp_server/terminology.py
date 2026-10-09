@@ -10,6 +10,8 @@ from .http_client import HttpClient, HttpRequestError
 
 logger = logging.getLogger(__name__)
 
+SNOMED_SYSTEM = "http://snomed.info/sct"
+
 
 class TerminologyInfo(BaseModel):
     """Represents a single routable terminology (SNOMED edition)."""
@@ -21,6 +23,10 @@ class TerminologyInfo(BaseModel):
     target_name: str
     backend_type: BackendType
     branch_path: str | None = None
+    # FHIR edition URI (http://snomed.info/sct/<moduleId>). Without it, FHIR
+    # operations fall back to the server's default edition (International),
+    # so extension content such as translations is silently missing.
+    edition_uri: str | None = None
 
 
 class TerminologyNotFoundError(KeyError):
@@ -72,6 +78,12 @@ def discover_snowstorm_terminologies(
         if not isinstance(branch_path, str) or not branch_path.strip():
             continue
         display_name = item.get("name")
+        uri_module_id = item.get("uriModuleId")
+        edition_uri = (
+            f"{SNOMED_SYSTEM}/{uri_module_id.strip()}"
+            if isinstance(uri_module_id, str) and uri_module_id.strip().isdigit()
+            else None
+        )
         terminologies.append(
             TerminologyInfo(
                 name=short_name.strip().lower(),
@@ -79,6 +91,7 @@ def discover_snowstorm_terminologies(
                 target_name=target_name,
                 backend_type=BackendType.SNOWSTORM,
                 branch_path=branch_path.strip(),
+                edition_uri=edition_uri,
             )
         )
     return terminologies

@@ -189,7 +189,7 @@ class ServerRuntime:
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
         with SnomedLookupService(target_cfg, client=self._client_for(target_cfg)) as svc:
-            result = svc.lookup(code=code, system=system, version=version)
+            result = svc.lookup(code=code, system=system, version=version or info.edition_uri)
         return {"terminology": info.name, **result.model_dump()}
 
     def snomed_validate_code(
@@ -203,7 +203,7 @@ class ServerRuntime:
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
         with SnomedLookupService(target_cfg, client=self._client_for(target_cfg)) as svc:
-            result = svc.validate_code(code=code, system=system, version=version)
+            result = svc.validate_code(code=code, system=system, version=version or info.edition_uri)
         return {"terminology": info.name, **result.model_dump()}
 
     def snomed_subsumes(
@@ -218,7 +218,7 @@ class ServerRuntime:
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
         with SnomedLookupService(target_cfg, client=self._client_for(target_cfg)) as svc:
-            result = svc.subsumes(code_a=code_a, code_b=code_b, system=system, version=version)
+            result = svc.subsumes(code_a=code_a, code_b=code_b, system=system, version=version or info.edition_uri)
         return {"terminology": info.name, **result.model_dump()}
 
     def snomed_expand(
@@ -245,6 +245,7 @@ class ServerRuntime:
                 summary_only=summary_only,
                 max_contains=applied_max_contains,
                 fuzzy=fuzzy,
+                edition_uri=info.edition_uri,
             )
         return {"terminology": info.name, **result.model_dump()}
 

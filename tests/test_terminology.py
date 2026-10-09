@@ -584,3 +584,22 @@ def test_retry_pending_discovery_keeps_error_while_backend_down(monkeypatch) -> 
     assert registry.has_pending_discovery()
     assert registry.list_terminology_names() == []
     assert any("still down" in e for e in registry.discovery_errors)
+
+def test_discover_derives_edition_uri_from_uri_module_id() -> None:
+    target = TargetConfig(base_url="http://test")
+    client = _make_snowstorm_client(
+        target,
+        {
+            "items": [
+                {"shortName": "SNOMEDCT-EE", "branchPath": "MAIN/SNOMEDCT-EE", "uriModuleId": "11000181102"},
+                {"shortName": "NO-MODULE", "branchPath": "MAIN/NO-MODULE"},
+                {"shortName": "BAD-MODULE", "branchPath": "MAIN/BAD", "uriModuleId": "not-a-sctid"},
+            ]
+        },
+    )
+
+    result = {t.name: t for t in discover_snowstorm_terminologies("ss", target, client=client)}
+
+    assert result["snomedct-ee"].edition_uri == "http://snomed.info/sct/11000181102"
+    assert result["no-module"].edition_uri is None
+    assert result["bad-module"].edition_uri is None
