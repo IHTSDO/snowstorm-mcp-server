@@ -344,6 +344,7 @@ def _edition_registry() -> tuple[TerminologyRegistry, TargetConfig]:
             branch_path="MAIN/SNOMEDCT-EE",
             edition_uri="http://snomed.info/sct/11000181102",
             accept_language="et-X-71000181105,en",
+            language_refsets=["71000181105"],
         ),
         target,
     )
@@ -489,3 +490,121 @@ def test_runtime_fhir_calls_leave_version_unset_without_edition(monkeypatch) -> 
     server.snomed_lookup(code="404684003")
 
     assert seen["version"] is None
+
+
+def _lookup_acceptability_runtime(monkeypatch, *, found=True, native_error=None, has_native_api=True):
+    registry, target = _edition_registry()
+    if not has_native_api:
+        status = registry.get_target_status("snowstorm")
+        status.capabilities.has_native_api = False
+
+    from snowstorm_mcp_server import runtime as runtime_module
+    from snowstorm_mcp_server.fhir import LookupResult
+    from snowstorm_mcp_server.snowstorm_native import ConceptDetail, DescriptionSummary
+
+    monkeypatch.setattr(runtime_module, "build_registry", lambda _cfg: registry)
+    native_calls: list[dict[str, object]] = []
+
+    class _StubFhirService:
+        def __init__(self, _target, *, client=None) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def lookup(self, **kwargs):
+            return LookupResult(code=kwargs["code"], found=found)
+
+    class _StubNativeService(_StubFhirService):
+        def get_concept(self, **kwargs):
+            native_calls.append(kwargs)
+            if native_error is not None:
+                raise native_error
+            return ConceptDetail(
+                concept_id=kwargs["concept_id"],
+                descriptions=[DescriptionSummary(
+                    term="Infarkt", lang="et", type="SYNONYM",
+                    acceptability={"71000181105": "PREFERRED"}, edition_acceptability="PREFERRED",
+                )],
+            )
+
+    monkeypatch.setattr(runtime_module, "SnomedLookupService", _StubFhirService)
+    monkeypatch.setattr(runtime_module, "SnowstormNativeService", _StubNativeService)
+    return ServerRuntime(AppConfig(targets={"snowstorm": target})), native_calls
+
+
+def test_runtime_lookup_skips_acceptability_unless_asked(monkeypatch) -> None:
+    server, native_calls = _lookup_acceptability_runtime(monkeypatch)
+
+    result = server.snomed_lookup(terminology="snomedct-ee", code="55641003")
+
+    assert native_calls == []
+    assert "descriptions" not in result
+
+
+def test_runtime_lookup_adds_acceptability_from_the_edition_branch(monkeypatch) -> None:
+    server, native_calls = _lookup_acceptability_runtime(monkeypatch)
+
+    result = server.snomed_lookup(
+        terminology="snomedct-ee", code="55641003", include_acceptability=True,
+    )
+
+    assert native_calls[0]["branch"] == "MAIN/SNOMEDCT-EE"
+    assert native_calls[0]["language_refsets"] == ["71000181105"]
+    assert native_calls[0]["accept_language"] == "et-X-71000181105,en"
+    assert result["descriptions"][0]["edition_acceptability"] == "PREFERRED"
+    assert result["edition_language_refsets"] == ["71000181105"]
+    assert "descriptions_notice" not in result
+
+
+def test_runtime_lookup_acceptability_notes_a_requested_version(monkeypatch) -> None:
+    server, _ = _lookup_acceptability_runtime(monkeypatch)
+
+    result = server.snomed_lookup(
+        terminology="snomedct-ee",
+        code="55641003",
+        version="http://snomed.info/sct/11000181102/version/20251130",
+        include_acceptability=True,
+    )
+
+    assert result["descriptions"]
+    assert "not the requested version" in result["descriptions_notice"]
+
+
+def test_runtime_lookup_acceptability_skips_unknown_codes(monkeypatch) -> None:
+    server, native_calls = _lookup_acceptability_runtime(monkeypatch, found=False)
+
+    result = server.snomed_lookup(terminology="snomedct-ee", code="1", include_acceptability=True)
+
+    assert native_calls == []
+    assert "descriptions" not in result
+
+
+def test_runtime_lookup_acceptability_reports_backends_without_native_api(monkeypatch) -> None:
+    server, native_calls = _lookup_acceptability_runtime(monkeypatch, has_native_api=False)
+
+    result = server.snomed_lookup(
+        terminology="snomedct-ee", code="55641003", include_acceptability=True,
+    )
+
+    assert native_calls == []
+    assert "not available on this backend" in result["descriptions_notice"]
+
+
+def test_runtime_lookup_keeps_fhir_result_when_acceptability_fails(monkeypatch) -> None:
+    from snowstorm_mcp_server.http_client import HttpRequestError
+
+    server, _ = _lookup_acceptability_runtime(
+        monkeypatch, native_error=HttpRequestError("HTTP 503", status_code=503),
+    )
+
+    result = server.snomed_lookup(
+        terminology="snomedct-ee", code="55641003", include_acceptability=True,
+    )
+
+    assert result["found"] is True
+    assert "descriptions" not in result
+    assert "HTTP 503" in result["descriptions_notice"]
