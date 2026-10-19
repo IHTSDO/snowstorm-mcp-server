@@ -608,3 +608,33 @@ def test_runtime_lookup_keeps_fhir_result_when_acceptability_fails(monkeypatch) 
     assert result["found"] is True
     assert "descriptions" not in result
     assert "HTTP 503" in result["descriptions_notice"]
+
+
+def test_runtime_lookup_acceptability_only_sends_sctids_to_the_native_api(monkeypatch) -> None:
+    server, native_calls = _lookup_acceptability_runtime(monkeypatch)
+
+    traversal = server.snomed_lookup(
+        terminology="snomedct-ee", code="55641003/../../admin", include_acceptability=True,
+    )
+    other_system = server.snomed_lookup(
+        terminology="snomedct-ee", code="55641003", system="http://loinc.org",
+        include_acceptability=True,
+    )
+
+    assert native_calls == []
+    assert "descriptions" not in traversal
+    assert "6-18 digits" in traversal["descriptions_notice"]
+    assert "descriptions" not in other_system
+    assert "only available for SNOMED CT" in other_system["descriptions_notice"]
+
+
+def test_runtime_lookup_acceptability_accepts_snomed_edition_system_uris(monkeypatch) -> None:
+    server, native_calls = _lookup_acceptability_runtime(monkeypatch)
+
+    for system in ("http://snomed.info/sct/", "http://snomed.info/sct/11000181102/version/20251130"):
+        result = server.snomed_lookup(
+            terminology="snomedct-ee", code="55641003", system=system, include_acceptability=True,
+        )
+        assert result["descriptions"]
+
+    assert len(native_calls) == 2
