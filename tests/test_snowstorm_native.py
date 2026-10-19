@@ -341,3 +341,31 @@ def test_snowstorm_native_get_concept_escapes_the_concept_id_in_the_path() -> No
 
     url = stub.calls[0][0][1]
     assert url == "http://localhost:8080/browser/MAIN/concepts/1%2F..%2F..%2Fadmin"
+
+
+def test_snowstorm_native_edition_acceptability_follows_the_first_edition_refset() -> None:
+    target = TargetConfig(base_url="http://localhost:8080")
+    stub = _StubClient()
+    us, gb = "900000000000509007", "900000000000508004"
+    stub.next_response = {
+        "conceptId": "263714004",
+        "descriptions": [
+            {"active": True, "type": "SYNONYM", "lang": "en", "term": "Color",
+             "acceptabilityMap": {us: "PREFERRED", gb: "ACCEPTABLE"}},
+            {"active": True, "type": "SYNONYM", "lang": "en", "term": "Colour",
+             "acceptabilityMap": {us: "ACCEPTABLE", gb: "PREFERRED"}},
+        ],
+    }
+
+    with SnowstormNativeService(target, client=stub) as svc:
+        gb_detail = svc.get_concept(concept_id="263714004", language_refsets=[gb, us])
+        intl_detail = svc.get_concept(concept_id="263714004")
+
+    assert [(d.term, d.edition_acceptability) for d in gb_detail.descriptions] == [
+        ("Colour", "PREFERRED"),
+        ("Color", "ACCEPTABLE"),
+    ]
+    assert [(d.term, d.edition_acceptability) for d in intl_detail.descriptions] == [
+        ("Color", "PREFERRED"),
+        ("Colour", "ACCEPTABLE"),
+    ]

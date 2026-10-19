@@ -362,10 +362,13 @@ _ACCEPTABILITY_RANK = {"PREFERRED": 0, "ACCEPTABLE": 1}
 
 
 def _edition_acceptability(acceptability: dict[str, str], edition_refsets: Sequence[str]) -> str | None:
-    values = {acceptability.get(refset) for refset in edition_refsets}
-    for level in ("PREFERRED", "ACCEPTABLE"):
-        if level in values:
-            return level
+    # Take the first edition refset that includes the description, as Snowstorm
+    # does when choosing the PT. A union would mark both "Colour" (GB) and
+    # "Color" (US) preferred in an edition that lists GB then US.
+    for refset in edition_refsets:
+        value = acceptability.get(refset)
+        if value in _ACCEPTABILITY_RANK:
+            return value
     return None
 
 

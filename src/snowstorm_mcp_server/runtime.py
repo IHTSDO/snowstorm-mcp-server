@@ -11,6 +11,7 @@ from .fhir import SnomedLookupService
 from .http_client import HttpClient, HttpRequestError
 from .snowstorm_native import SnowstormNativeService
 from .terminology import (
+    SNOMED_SYSTEM,
     TerminologyInfo,
     TerminologyNotFoundError,
     TerminologyRegistry,
@@ -210,8 +211,12 @@ class ServerRuntime:
         """Add per-description acceptability to a lookup, which FHIR designations lack."""
         # The code goes into a browser API path, so only send real SCTIDs:
         # anything else would either 404 or reach a different endpoint.
-        if system.rstrip("/") != "http://snomed.info/sct" or not _SCTID.fullmatch(code):
-            return {"descriptions_notice": "Acceptability is only available for SNOMED CT concept IDs."}
+        # Edition and version URIs (http://snomed.info/sct/<module>/version/<date>)
+        # are SNOMED CT too.
+        if system.rstrip("/") != SNOMED_SYSTEM and not system.startswith(SNOMED_SYSTEM + "/"):
+            return {"descriptions_notice": "Acceptability is only available for SNOMED CT codes."}
+        if not _SCTID.fullmatch(code):
+            return {"descriptions_notice": "Acceptability needs a SNOMED CT concept ID (6-18 digits)."}
         status = self.registry.get_target_status(info.target_name)
         if status and not status.capabilities.has_native_api:
             return {
