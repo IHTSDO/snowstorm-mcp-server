@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import threading
 import time
 from typing import Any
@@ -19,6 +20,8 @@ from .terminology import (
 # Minimum delay between re-discovery attempts for targets whose terminology
 # discovery failed at startup, so a down backend is not hammered on every call.
 DISCOVERY_RETRY_INTERVAL_SECONDS = 30.0
+
+_SCTID = re.compile(r"[0-9]{6,18}")
 
 
 class UnsupportedBackendError(ValueError):
@@ -193,13 +196,22 @@ class ServerRuntime:
             result = svc.lookup(code=code, system=system, version=version or info.edition_uri)
         response: dict[str, Any] = {"terminology": info.name, **result.model_dump()}
         if include_acceptability and result.found:
-            response.update(self._lookup_acceptability(info, target_cfg, code, version))
+            response.update(self._lookup_acceptability(info, target_cfg, code, system, version))
         return response
 
     def _lookup_acceptability(
-        self, info: TerminologyInfo, target_cfg: TargetConfig, code: str, version: str | None,
+        self,
+        info: TerminologyInfo,
+        target_cfg: TargetConfig,
+        code: str,
+        system: str,
+        version: str | None,
     ) -> dict[str, Any]:
         """Add per-description acceptability to a lookup, which FHIR designations lack."""
+        # The code goes into a browser API path, so only send real SCTIDs:
+        # anything else would either 404 or reach a different endpoint.
+        if system.rstrip("/") != "http://snomed.info/sct" or not _SCTID.fullmatch(code):
+            return {"descriptions_notice": "Acceptability is only available for SNOMED CT concept IDs."}
         status = self.registry.get_target_status(info.target_name)
         if status and not status.capabilities.has_native_api:
             return {

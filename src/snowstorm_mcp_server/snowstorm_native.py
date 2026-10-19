@@ -220,7 +220,7 @@ class SnowstormNativeService:
         language_refsets: Sequence[str] = (),
     ) -> ConceptDetail:
         branch_path = branch.strip("/") or "MAIN"
-        url = f"{self.target.base_url}/browser/{branch_path}/concepts/{concept_id}"
+        url = f"{self.target.base_url}/browser/{branch_path}/concepts/{quote(concept_id, safe='')}"
         data = self.client.request(
             "GET", url, headers=_language_headers(accept_language), expect_json=True,
         )

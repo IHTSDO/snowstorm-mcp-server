@@ -329,3 +329,15 @@ def test_snowstorm_native_sends_accept_language_only_when_set(accept_language) -
         svc.get_concept(concept_id="73211009", accept_language=accept_language)
 
     assert [kwargs["headers"] for _args, kwargs in stub.calls] == [expected, expected]
+
+
+def test_snowstorm_native_get_concept_escapes_the_concept_id_in_the_path() -> None:
+    target = TargetConfig(base_url="http://localhost:8080")
+    stub = _StubClient()
+    stub.next_response = {}
+
+    with SnowstormNativeService(target, client=stub) as svc:
+        svc.get_concept(concept_id="1/../../admin", branch="MAIN")
+
+    url = stub.calls[0][0][1]
+    assert url == "http://localhost:8080/browser/MAIN/concepts/1%2F..%2F..%2Fadmin"
