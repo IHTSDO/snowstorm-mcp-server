@@ -269,6 +269,11 @@ def create_mcp_app(config_path: str | Path | None = None) -> MCPServer:
             "If the code does not exist, returns found=false with a message (not an error). "
             "NOT FOR: searching by text (use snomed_expand with a {{ term = \"...\" }} filter) or "
             "retrieving a concept set (use snomed_expand with ECL). "
+            "ACCEPTABILITY: FHIR designations do not say whether a term is preferred or acceptable. "
+            "Set include_acceptability=true whenever the user asks about preferred terms, acceptable "
+            "synonyms, translations or a national edition's terms; the response then adds "
+            "'descriptions', each with its language, per-refset 'acceptability' and "
+            "'edition_acceptability' (PREFERRED/ACCEPTABLE in the edition's own language refsets). "
             "Optionally specify terminology (e.g. 'snomedct-us') and/or target; "
             "defaults to the server's default terminology when omitted."
         ),
@@ -281,6 +286,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> MCPServer:
         target: str | None = None,
         system: str = "http://snomed.info/sct",
         version: str | None = None,
+        include_acceptability: bool = False,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         guards.pre_lookup(ctx.session if ctx is not None else None)
@@ -292,6 +298,7 @@ def create_mcp_app(config_path: str | Path | None = None) -> MCPServer:
                     code=code,
                     system=system,
                     version=version,
+                    include_acceptability=include_acceptability,
                 )
             )
 
@@ -755,6 +762,9 @@ def create_mcp_app(config_path: str | Path | None = None) -> MCPServer:
             title="Snowstorm Get Concept Detail",
             description=(
                 "Snowstorm-native concept detail by conceptId. "
+                "Each entry in 'descriptions' carries its language, its acceptability per language "
+                "refset (refset SCTID -> PREFERRED or ACCEPTABLE) and 'edition_acceptability' "
+                "(PREFERRED/ACCEPTABLE in the edition's own language refsets, null if neither). "
                 "Optionally specify terminology and/or target; defaults to the server's default terminology."
             ),
             annotations=_READ_ONLY_ANNOTATIONS,

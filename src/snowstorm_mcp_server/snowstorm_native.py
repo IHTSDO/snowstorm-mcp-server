@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from typing import Any
 from urllib.parse import quote
 
@@ -41,6 +42,12 @@ class DescriptionSummary(BaseModel):
     term: str
     lang: str | None = None
     type: str | None = None
+    # Language refset SCTID -> "PREFERRED" or "ACCEPTABLE", as Snowstorm's
+    # acceptabilityMap. Empty when no language refset includes the description.
+    acceptability: dict[str, str] = Field(default_factory=dict)
+    # "PREFERRED" or "ACCEPTABLE" in any of the edition's own language refsets,
+    # so callers need not know which refset SCTID belongs to which edition.
+    edition_acceptability: str | None = None
 
 
 class ConceptDetail(BaseModel):
@@ -210,9 +217,10 @@ class SnowstormNativeService:
         include_synonyms: bool = True,
         max_synonyms: int = 15,
         accept_language: str | None = None,
+        language_refsets: Sequence[str] = (),
     ) -> ConceptDetail:
         branch_path = branch.strip("/") or "MAIN"
-        url = f"{self.target.base_url}/browser/{branch_path}/concepts/{concept_id}"
+        url = f"{self.target.base_url}/browser/{branch_path}/concepts/{quote(concept_id, safe='')}"
         data = self.client.request(
             "GET", url, headers=_language_headers(accept_language), expect_json=True,
         )
@@ -222,8 +230,8 @@ class SnowstormNativeService:
         tagged: list[DescriptionSummary] = []
         descriptions = data.get("descriptions")
         if include_synonyms and isinstance(descriptions, list):
-            seen: set[str] = set()
-            seen_tagged: set[tuple[str | None, str]] = set()
+            edition_refsets = list(language_refsets) or list(_DEFAULT_LANGUAGE_REFSETS)
+            candidates: list[DescriptionSummary] = []
             for d in descriptions:
                 if not isinstance(d, dict):
                     continue
@@ -234,11 +242,33 @@ class SnowstormNativeService:
                 term = d.get("term")
                 if not isinstance(term, str):
                     continue
-                lang = d.get("lang") if isinstance(d.get("lang"), str) else None
+                acceptability_map = d.get("acceptabilityMap")
+                acceptability = {
+                    str(refset): value
+                    for refset, value in (
+                        acceptability_map.items() if isinstance(acceptability_map, dict) else []
+                    )
+                    if isinstance(value, str)
+                }
+                candidates.append(DescriptionSummary(
+                    term=term,
+                    lang=d.get("lang") if isinstance(d.get("lang"), str) else None,
+                    type=d.get("type"),
+                    acceptability=acceptability,
+                    edition_acceptability=_edition_acceptability(acceptability, edition_refsets),
+                ))
+            # The cap counts every language together, so a concept with many
+            # English synonyms could crowd out the edition's own terms. A stable
+            # sort keeps the edition's preferred, then acceptable, terms first.
+            candidates.sort(key=lambda c: _ACCEPTABILITY_RANK.get(c.edition_acceptability or "", 2))
+            seen: set[str] = set()
+            seen_tagged: set[tuple[str | None, str]] = set()
+            for candidate in candidates:
+                term = candidate.term
                 key = term.casefold()
-                if len(tagged) < max_synonyms and (lang, key) not in seen_tagged:
-                    seen_tagged.add((lang, key))
-                    tagged.append(DescriptionSummary(term=term, lang=lang, type=d.get("type")))
+                if len(tagged) < max_synonyms and (candidate.lang, key) not in seen_tagged:
+                    seen_tagged.add((candidate.lang, key))
+                    tagged.append(candidate)
                 if len(synonyms) < max_synonyms and key not in seen:
                     seen.add(key)
                     synonyms.append(term)
@@ -324,6 +354,22 @@ class SnowstormNativeService:
             returned=len(versions),
             versions=versions,
         )
+
+
+# US then GB English, the refsets Snowstorm uses when an edition sets none.
+_DEFAULT_LANGUAGE_REFSETS = ("900000000000509007", "900000000000508004")
+_ACCEPTABILITY_RANK = {"PREFERRED": 0, "ACCEPTABLE": 1}
+
+
+def _edition_acceptability(acceptability: dict[str, str], edition_refsets: Sequence[str]) -> str | None:
+    # Take the first edition refset that includes the description, as Snowstorm
+    # does when choosing the PT. A union would mark both "Colour" (GB) and
+    # "Color" (US) preferred in an edition that lists GB then US.
+    for refset in edition_refsets:
+        value = acceptability.get(refset)
+        if value in _ACCEPTABILITY_RANK:
+            return value
+    return None
 
 
 def _language_headers(accept_language: str | None) -> dict[str, str] | None:

@@ -227,6 +227,96 @@ def test_snowstorm_native_get_concept_keeps_identical_translation_with_its_langu
     assert detail.raw_description_count == 4
 
 
+def test_snowstorm_native_get_concept_reports_acceptability_per_language_refset() -> None:
+    target = TargetConfig(base_url="http://localhost:8080")
+    stub = _StubClient()
+    stub.next_response = {
+        "conceptId": "55641003",
+        "descriptions": [
+            {
+                "active": True, "type": "SYNONYM", "lang": "et", "term": "Infarkt",
+                "acceptabilityMap": {"71000181105": "PREFERRED"},
+            },
+            {
+                "active": True, "type": "SYNONYM", "lang": "en", "term": "Infarction",
+                "acceptabilityMap": {"900000000000509007": "ACCEPTABLE", "900000000000508004": "ACCEPTABLE"},
+            },
+            {"active": True, "type": "SYNONYM", "lang": "en", "term": "Old infarct", "acceptabilityMap": {}},
+        ],
+    }
+
+    with SnowstormNativeService(target, client=stub) as svc:
+        detail = svc.get_concept(
+            concept_id="55641003", branch="MAIN/SNOMEDCT-EE", language_refsets=["71000181105"],
+        )
+
+    assert [(d.term, d.acceptability, d.edition_acceptability) for d in detail.descriptions] == [
+        ("Infarkt", {"71000181105": "PREFERRED"}, "PREFERRED"),
+        (
+            "Infarction",
+            {"900000000000509007": "ACCEPTABLE", "900000000000508004": "ACCEPTABLE"},
+            None,
+        ),
+        ("Old infarct", {}, None),
+    ]
+
+
+def test_snowstorm_native_get_concept_judges_international_against_us_and_gb() -> None:
+    target = TargetConfig(base_url="http://localhost:8080")
+    stub = _StubClient()
+    stub.next_response = {
+        "conceptId": "22298006",
+        "descriptions": [
+            {
+                "active": True, "type": "SYNONYM", "lang": "en", "term": "Cardiac infarction",
+                "acceptabilityMap": {"900000000000509007": "ACCEPTABLE"},
+            },
+            {
+                "active": True, "type": "SYNONYM", "lang": "en", "term": "Myocardial infarction",
+                "acceptabilityMap": {"900000000000509007": "PREFERRED", "900000000000508004": "PREFERRED"},
+            },
+        ],
+    }
+
+    with SnowstormNativeService(target, client=stub) as svc:
+        detail = svc.get_concept(concept_id="22298006")
+
+    assert [(d.term, d.edition_acceptability) for d in detail.descriptions] == [
+        ("Myocardial infarction", "PREFERRED"),
+        ("Cardiac infarction", "ACCEPTABLE"),
+    ]
+
+
+def test_snowstorm_native_get_concept_keeps_edition_terms_inside_the_synonym_cap() -> None:
+    target = TargetConfig(base_url="http://localhost:8080")
+    stub = _StubClient()
+    english = [
+        {
+            "active": True, "type": "SYNONYM", "lang": "en", "term": f"English synonym {i}",
+            "acceptabilityMap": {"900000000000509007": "ACCEPTABLE"},
+        }
+        for i in range(5)
+    ]
+    stub.next_response = {
+        "conceptId": "55641003",
+        "descriptions": [
+            *english,
+            {
+                "active": True, "type": "SYNONYM", "lang": "et", "term": "Infarkt",
+                "acceptabilityMap": {"71000181105": "PREFERRED"},
+            },
+        ],
+    }
+
+    with SnowstormNativeService(target, client=stub) as svc:
+        detail = svc.get_concept(
+            concept_id="55641003", max_synonyms=3, language_refsets=["71000181105"],
+        )
+
+    assert [d.term for d in detail.descriptions] == ["Infarkt", "English synonym 0", "English synonym 1"]
+    assert detail.synonyms == ["Infarkt", "English synonym 0", "English synonym 1"]
+
+
 @pytest.mark.parametrize("accept_language", [None, "et-X-71000181105,en"])
 def test_snowstorm_native_sends_accept_language_only_when_set(accept_language) -> None:
     target = TargetConfig(base_url="http://localhost:8080")
@@ -239,3 +329,43 @@ def test_snowstorm_native_sends_accept_language_only_when_set(accept_language) -
         svc.get_concept(concept_id="73211009", accept_language=accept_language)
 
     assert [kwargs["headers"] for _args, kwargs in stub.calls] == [expected, expected]
+
+
+def test_snowstorm_native_get_concept_escapes_the_concept_id_in_the_path() -> None:
+    target = TargetConfig(base_url="http://localhost:8080")
+    stub = _StubClient()
+    stub.next_response = {}
+
+    with SnowstormNativeService(target, client=stub) as svc:
+        svc.get_concept(concept_id="1/../../admin", branch="MAIN")
+
+    url = stub.calls[0][0][1]
+    assert url == "http://localhost:8080/browser/MAIN/concepts/1%2F..%2F..%2Fadmin"
+
+
+def test_snowstorm_native_edition_acceptability_follows_the_first_edition_refset() -> None:
+    target = TargetConfig(base_url="http://localhost:8080")
+    stub = _StubClient()
+    us, gb = "900000000000509007", "900000000000508004"
+    stub.next_response = {
+        "conceptId": "263714004",
+        "descriptions": [
+            {"active": True, "type": "SYNONYM", "lang": "en", "term": "Color",
+             "acceptabilityMap": {us: "PREFERRED", gb: "ACCEPTABLE"}},
+            {"active": True, "type": "SYNONYM", "lang": "en", "term": "Colour",
+             "acceptabilityMap": {us: "ACCEPTABLE", gb: "PREFERRED"}},
+        ],
+    }
+
+    with SnowstormNativeService(target, client=stub) as svc:
+        gb_detail = svc.get_concept(concept_id="263714004", language_refsets=[gb, us])
+        intl_detail = svc.get_concept(concept_id="263714004")
+
+    assert [(d.term, d.edition_acceptability) for d in gb_detail.descriptions] == [
+        ("Colour", "PREFERRED"),
+        ("Color", "ACCEPTABLE"),
+    ]
+    assert [(d.term, d.edition_acceptability) for d in intl_detail.descriptions] == [
+        ("Color", "PREFERRED"),
+        ("Colour", "ACCEPTABLE"),
+    ]

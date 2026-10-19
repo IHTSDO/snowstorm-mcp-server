@@ -702,3 +702,12 @@ def test_discover_builds_accept_language_from_edition_language_refsets() -> None
     )
     assert result["snomedct"].accept_language is None
     assert result["junk"].accept_language is None
+
+    # Acceptability is judged against the edition's national refsets only, so
+    # English synonyms are not reported as preferred in the Estonian edition.
+    assert result["snomedct-ee"].language_refsets == ["71000181105"]
+    assert result["snomedct-be"].language_refsets == ["31000172101", "21000172104"]
+    assert result["snomedct-se"].language_refsets == ["46011000052107"]
+    assert result["snomedct-gb"].language_refsets == ["900000000000508004", "900000000000509007"]
+    assert result["snomedct"].language_refsets == []
+    assert result["junk"].language_refsets == []

@@ -25,7 +25,7 @@ Common intents:
 ## How to proceed
 
 ### Finding a concept by name
-Use `snowstorm_search_concepts` for a quick text match. If the user needs full detail (synonyms, attributes, parents), follow up with `snomed_lookup` on the top result.
+Use `snowstorm_search_concepts` for a quick text match. If the user needs full detail (synonyms, attributes, parents), follow up with `snomed_lookup` on the top result. If they care which terms are preferred or acceptable, or are working in a national edition or translation, pass `include_acceptability=true`.
 
 Present results as:
 - **Name** (Fully Specified Name)
@@ -54,7 +54,9 @@ Use `snomed_subsumes`. Explain the result in plain English — what it confirms 
 Use `snomed_get_ancestors` (with `direct_only=true` for immediate parents) or `snomed_get_children` for one level down. Show one level at a time and offer to go deeper or broader.
 
 ### Querying a national edition
-Call `list_terminologies` first to confirm the edition key (e.g. `snomedct-us`, `snomedct-au`), then pass it as the `terminology` parameter on subsequent calls.
+Call `list_terminologies` first to confirm the edition key (e.g. `snomedct-us`, `snomedct-au`), then pass it as the `terminology` parameter on subsequent calls. Without it, calls run against the server's default edition, usually International, which has no translations.
+
+When showing a national edition's terms, call `snomed_lookup` with `include_acceptability=true` and use each description's `edition_acceptability` to label it as the preferred term or an acceptable synonym in that edition. Group terms by language. Never infer preferred status from the order of the synonyms.
 
 ## Style
 
