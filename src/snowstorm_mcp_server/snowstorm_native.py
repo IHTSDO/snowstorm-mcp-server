@@ -255,8 +255,8 @@ class SnowstormNativeService:
                     lang=d.get("lang") if isinstance(d.get("lang"), str) else None,
                     type=d.get("type"),
                     acceptability=acceptability,
-                    edition_acceptability=_edition_acceptability(acceptability, edition_refsets),
                 ))
+            _set_edition_acceptability(candidates, edition_refsets)
             # The cap counts every language together, so a concept with many
             # English synonyms could crowd out the edition's own terms. A stable
             # sort keeps the edition's preferred, then acceptable, terms first.
@@ -361,15 +361,25 @@ _DEFAULT_LANGUAGE_REFSETS = ("900000000000509007", "900000000000508004")
 _ACCEPTABILITY_RANK = {"PREFERRED": 0, "ACCEPTABLE": 1}
 
 
-def _edition_acceptability(acceptability: dict[str, str], edition_refsets: Sequence[str]) -> str | None:
-    # Take the first edition refset that includes the description, as Snowstorm
-    # does when choosing the PT. A union would mark both "Colour" (GB) and
-    # "Color" (US) preferred in an edition that lists GB then US.
+def _set_edition_acceptability(
+    candidates: list[DescriptionSummary], edition_refsets: Sequence[str],
+) -> None:
+    # Snowstorm takes each language's PT from the first edition refset that has
+    # one, so judge every description against its language's first refset with
+    # any member. Falling through to later refsets per description would mark
+    # "Colours" (GB only) as well as "Colors" (US) preferred in a US-then-GB
+    # edition; a union would do the same where both refsets list both terms.
+    # Per-language matters for editions such as BE, whose nl and fr refsets each
+    # hold only their own language.
+    dialect: dict[str | None, str] = {}
     for refset in edition_refsets:
-        value = acceptability.get(refset)
-        if value in _ACCEPTABILITY_RANK:
-            return value
-    return None
+        for c in candidates:
+            if c.lang not in dialect and c.acceptability.get(refset) in _ACCEPTABILITY_RANK:
+                dialect[c.lang] = refset
+    for c in candidates:
+        dialect_refset = dialect.get(c.lang)
+        value = c.acceptability.get(dialect_refset) if dialect_refset else None
+        c.edition_acceptability = value if value in _ACCEPTABILITY_RANK else None
 
 
 def _language_headers(accept_language: str | None) -> dict[str, str] | None:
