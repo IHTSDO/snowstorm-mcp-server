@@ -369,3 +369,35 @@ def test_snowstorm_native_edition_acceptability_follows_the_first_edition_refset
         ("Color", "PREFERRED"),
         ("Colour", "ACCEPTABLE"),
     ]
+
+
+def test_snowstorm_native_edition_acceptability_ignores_terms_outside_the_dialect_refset() -> None:
+    # As returned for 263714004 on snomedct-us: each spelling is only in its own
+    # dialect's refset, so the GB term must not count as preferred in a
+    # US-then-GB edition (or the US term in a GB-then-US one).
+    target = TargetConfig(base_url="http://localhost:8080")
+    stub = _StubClient()
+    us, gb = "900000000000509007", "900000000000508004"
+    stub.next_response = {
+        "conceptId": "263714004",
+        "descriptions": [
+            {"active": True, "type": "SYNONYM", "lang": "en", "term": "Colours",
+             "acceptabilityMap": {gb: "PREFERRED"}},
+            {"active": True, "type": "SYNONYM", "lang": "en", "term": "Colors",
+             "acceptabilityMap": {us: "PREFERRED"}},
+            {"active": True, "type": "SYNONYM", "lang": "nl", "term": "Kleuren",
+             "acceptabilityMap": {"31000146106": "PREFERRED"}},
+        ],
+    }
+
+    with SnowstormNativeService(target, client=stub) as svc:
+        us_detail = svc.get_concept(concept_id="263714004", language_refsets=[us, gb])
+        gb_detail = svc.get_concept(concept_id="263714004", language_refsets=[gb, us])
+        nl_detail = svc.get_concept(concept_id="263714004", language_refsets=["31000146106", us, gb])
+
+    def acceptability(detail):
+        return {d.term: d.edition_acceptability for d in detail.descriptions}
+
+    assert acceptability(us_detail) == {"Colors": "PREFERRED", "Colours": None, "Kleuren": None}
+    assert acceptability(gb_detail) == {"Colours": "PREFERRED", "Colors": None, "Kleuren": None}
+    assert acceptability(nl_detail) == {"Kleuren": "PREFERRED", "Colors": "PREFERRED", "Colours": None}
