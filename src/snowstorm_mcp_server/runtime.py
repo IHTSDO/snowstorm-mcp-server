@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import threading
 import time
 from typing import Any
@@ -7,9 +8,10 @@ from typing import Any
 from .capabilities import probe_target
 from .config import AppConfig, TargetConfig
 from .fhir import SnomedLookupService
-from .http_client import HttpClient
+from .http_client import HttpClient, HttpRequestError
 from .snowstorm_native import SnowstormNativeService
 from .terminology import (
+    SNOMED_SYSTEM,
     TerminologyInfo,
     TerminologyNotFoundError,
     TerminologyRegistry,
@@ -19,6 +21,8 @@ from .terminology import (
 # Minimum delay between re-discovery attempts for targets whose terminology
 # discovery failed at startup, so a down backend is not hammered on every call.
 DISCOVERY_RETRY_INTERVAL_SECONDS = 30.0
+
+_SCTID = re.compile(r"[0-9]{6,18}")
 
 
 class UnsupportedBackendError(ValueError):
@@ -186,11 +190,63 @@ class ServerRuntime:
         code: str,
         system: str = "http://snomed.info/sct",
         version: str | None = None,
+        include_acceptability: bool = False,
     ) -> dict[str, Any]:
         info, target_cfg = self._resolve(terminology, target)
         with SnomedLookupService(target_cfg, client=self._client_for(target_cfg)) as svc:
             result = svc.lookup(code=code, system=system, version=version or info.edition_uri)
-        return {"terminology": info.name, **result.model_dump()}
+        response: dict[str, Any] = {"terminology": info.name, **result.model_dump()}
+        if include_acceptability and result.found:
+            response.update(self._lookup_acceptability(info, target_cfg, code, system, version))
+        return response
+
+    def _lookup_acceptability(
+        self,
+        info: TerminologyInfo,
+        target_cfg: TargetConfig,
+        code: str,
+        system: str,
+        version: str | None,
+    ) -> dict[str, Any]:
+        """Add per-description acceptability to a lookup, which FHIR designations lack."""
+        # The code goes into a browser API path, so only send real SCTIDs:
+        # anything else would either 404 or reach a different endpoint.
+        # Edition and version URIs (http://snomed.info/sct/<module>/version/<date>)
+        # are SNOMED CT too.
+        if system.rstrip("/") != SNOMED_SYSTEM and not system.startswith(SNOMED_SYSTEM + "/"):
+            return {"descriptions_notice": "Acceptability is only available for SNOMED CT codes."}
+        if not _SCTID.fullmatch(code):
+            return {"descriptions_notice": "Acceptability needs a SNOMED CT concept ID (6-18 digits)."}
+        status = self.registry.get_target_status(info.target_name)
+        if status and not status.capabilities.has_native_api:
+            return {
+                "descriptions_notice": (
+                    "Acceptability is not available on this backend: it needs the Snowstorm "
+                    "browser API, which this server does not expose."
+                ),
+            }
+        try:
+            with SnowstormNativeService(target_cfg, client=self._client_for(target_cfg)) as svc:
+                detail = svc.get_concept(
+                    concept_id=code,
+                    branch=info.branch_path or "MAIN",
+                    max_synonyms=self.config.response_limits.max_synonyms,
+                    accept_language=info.accept_language,
+                    language_refsets=info.language_refsets,
+                )
+        except HttpRequestError as exc:
+            # The FHIR lookup already succeeded, so report the gap rather than
+            # failing the whole call.
+            return {"descriptions_notice": f"Acceptability could not be retrieved: {exc}"}
+        extra: dict[str, Any] = {
+            "descriptions": [d.model_dump() for d in detail.descriptions],
+            "edition_language_refsets": info.language_refsets or None,
+        }
+        if version:
+            extra["descriptions_notice"] = (
+                "Acceptability comes from the edition's current content, not the requested version."
+            )
+        return extra
 
     def snomed_validate_code(
         self,
@@ -317,6 +373,7 @@ class ServerRuntime:
                 include_synonyms=include_synonyms,
                 max_synonyms=applied_max_synonyms,
                 accept_language=info.accept_language,
+                language_refsets=info.language_refsets,
             )
         return {"terminology": info.name, **result.model_dump()}
 

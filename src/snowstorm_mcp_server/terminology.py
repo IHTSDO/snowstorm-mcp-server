@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .capabilities import BackendType, TargetStatus, probe_target
 from .config import AppConfig, TargetConfig
@@ -32,6 +32,10 @@ class TerminologyInfo(BaseModel):
     # PT/FSN from the US/GB English refsets, so translated editions return
     # English PTs even when a local-language PT exists.
     accept_language: str | None = None
+    # The language refsets that give this edition its own PTs: its national
+    # ones, or the US/GB English ones it lists when it has none. Empty when
+    # /codesystems lists none (e.g. International).
+    language_refsets: list[str] = Field(default_factory=list)
 
 
 class TerminologyNotFoundError(KeyError):
@@ -101,6 +105,7 @@ def discover_snowstorm_terminologies(
                 branch_path=branch_path.strip(),
                 edition_uri=edition_uri,
                 accept_language=_accept_language_for(item),
+                language_refsets=_own_language_refsets_for(item),
             )
         )
     return terminologies
@@ -113,24 +118,37 @@ _SNOWSTORM_DEFAULT_ACCEPT_LANGUAGE = "en-X-900000000000509007,en-X-9000000000005
 _INTERNATIONAL_ENGLISH_REFSETS = frozenset({"900000000000509007", "900000000000508004"})
 
 
-def _accept_language_for(item: dict) -> str | None:
-    """Build an Accept-Language header from a /codesystems item, or None to keep
-    Snowstorm's default (e.g. International, which sets no language refsets)."""
+def _language_refsets_for(item: dict) -> list[str]:
+    """Return a /codesystems item's language refset SCTIDs, the edition's own first."""
     # Snowstorm rejects the whole request (HTTP 400 "Invalid displayLanguage")
-    # if any entry is malformed, so only emit SCTIDs and two-letter codes.
+    # if any Accept-Language entry is malformed, so only keep SCTIDs.
     refsets = [
         r.strip()
         for r in item.get("defaultLanguageReferenceSets") or []
         if isinstance(r, str) and re.fullmatch(r"[0-9]{6,18}", r.strip())
     ]
-    if not refsets:
-        return None
     # Snowstorm takes the PT from the first dialect that has one, and some
     # editions (SE, DK, FR, BE) list the US refset before their own, which
     # makes the English PT win. A stable sort puts the edition's own refsets
     # first; US/GB keep their listed order, so a GB-preferring edition stays
     # GB-first.
     refsets.sort(key=lambda r: r in _INTERNATIONAL_ENGLISH_REFSETS)
+    return list(dict.fromkeys(refsets))
+
+
+def _own_language_refsets_for(item: dict) -> list[str]:
+    # Editions such as EE list the US refset next to their own; counting it
+    # would make English synonyms look preferred in the Estonian edition.
+    refsets = _language_refsets_for(item)
+    return [r for r in refsets if r not in _INTERNATIONAL_ENGLISH_REFSETS] or refsets
+
+
+def _accept_language_for(item: dict) -> str | None:
+    """Build an Accept-Language header from a /codesystems item, or None to keep
+    Snowstorm's default (e.g. International, which sets no language refsets)."""
+    refsets = _language_refsets_for(item)
+    if not refsets:
+        return None
     # Snowstorm only matches a dialect when the description's language equals
     # the dialect's code, and /codesystems does not say which language each
     # refset holds. Pairing every refset with every edition language is safe:

@@ -52,6 +52,8 @@ Look for:
 ### Inspecting native concept data
 Use `snowstorm_get_concept_native` to get the raw representation. Present it structured — descriptions grouped by type (FSN, PT, acceptable synonyms), relationships by attribute type, axioms separately. Do not flatten to a prose summary unless asked.
 
+Take PT and acceptable status from each description's `acceptability` (language refset SCTID -> PREFERRED/ACCEPTABLE) and `edition_acceptability` fields, never from list order. A term can be preferred in one refset and acceptable in another (e.g. US vs GB English), so report per refset when they differ. `snomed_lookup` returns the same fields when called with `include_acceptability=true`.
+
 ### Validating a value set
 For each code, call `snomed_validate_code`. Aggregate results: report active/inactive counts up front, then list any inactive codes with their IDs and last known display names. Offer to look up replacement concepts for inactive ones.
 
