@@ -230,7 +230,7 @@ class SnowstormNativeService:
         tagged: list[DescriptionSummary] = []
         descriptions = data.get("descriptions")
         if include_synonyms and isinstance(descriptions, list):
-            edition_refsets = list(language_refsets) or list(_DEFAULT_LANGUAGE_REFSETS)
+            edition_refsets = list(language_refsets) or list(DEFAULT_LANGUAGE_REFSETS)
             candidates: list[DescriptionSummary] = []
             for d in descriptions:
                 if not isinstance(d, dict):
@@ -357,7 +357,7 @@ class SnowstormNativeService:
 
 
 # US then GB English, the refsets Snowstorm uses when an edition sets none.
-_DEFAULT_LANGUAGE_REFSETS = ("900000000000509007", "900000000000508004")
+DEFAULT_LANGUAGE_REFSETS = ("900000000000509007", "900000000000508004")
 _ACCEPTABILITY_RANK = {"PREFERRED": 0, "ACCEPTABLE": 1}
 
 

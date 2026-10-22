@@ -9,7 +9,7 @@ from .capabilities import probe_target
 from .config import AppConfig, TargetConfig
 from .fhir import SnomedLookupService
 from .http_client import HttpClient, HttpRequestError
-from .snowstorm_native import SnowstormNativeService
+from .snowstorm_native import DEFAULT_LANGUAGE_REFSETS, SnowstormNativeService
 from .terminology import (
     SNOMED_SYSTEM,
     TerminologyInfo,
@@ -240,7 +240,9 @@ class ServerRuntime:
             return {"descriptions_notice": f"Acceptability could not be retrieved: {exc}"}
         extra: dict[str, Any] = {
             "descriptions": [d.model_dump() for d in detail.descriptions],
-            "edition_language_refsets": info.language_refsets or None,
+            # The refsets edition_acceptability was judged against, including
+            # the US/GB default for editions that set none (e.g. International).
+            "edition_language_refsets": info.language_refsets or list(DEFAULT_LANGUAGE_REFSETS),
         }
         if version:
             extra["descriptions_notice"] = (
