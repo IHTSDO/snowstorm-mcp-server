@@ -638,3 +638,12 @@ def test_runtime_lookup_acceptability_accepts_snomed_edition_system_uris(monkeyp
         assert result["descriptions"]
 
     assert len(native_calls) == 2
+
+
+def test_runtime_lookup_reports_default_refsets_for_editions_without_their_own(monkeypatch) -> None:
+    server, native_calls = _lookup_acceptability_runtime(monkeypatch)
+
+    result = server.snomed_lookup(terminology="snomedct", code="55641003", include_acceptability=True)
+
+    assert native_calls[0]["language_refsets"] == []
+    assert result["edition_language_refsets"] == ["900000000000509007", "900000000000508004"]
